@@ -20,6 +20,7 @@ from aw_query import query2
 from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
+from .checkins import build_checkins_payload
 from .dashboard_summary_store import SummarySnapshotStore
 from .exceptions import NotFound
 from .settings import Settings
@@ -379,6 +380,9 @@ class ServerAPI:
             always_active_pattern=always_active_pattern,
             store=self.summary_snapshot_store,
         )
+
+    def get_checkins(self, *, date_filter: Optional[str] = None) -> Dict[str, Any]:
+        return build_checkins_payload(date_filter=date_filter)
 
     # TODO: Right now the log format on disk has to be JSON, this is hard to read by humans...
     def get_log(self):

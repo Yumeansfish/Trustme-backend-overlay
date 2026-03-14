@@ -374,6 +374,14 @@ class SummarySnapshotResource(Resource):
         return jsonify(result)
 
 
+@api.route("/0/dashboard/checkins")
+class CheckinsResource(Resource):
+    def get(self):
+        date_filter = request.args.get("date", None)
+        result = current_app.api.get_checkins(date_filter=date_filter)
+        return jsonify(result)
+
+
 # EXPORT AND IMPORT
 
 
