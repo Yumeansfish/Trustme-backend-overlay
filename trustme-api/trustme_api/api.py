@@ -23,6 +23,7 @@ from .__about__ import __version__
 from .checkins import build_checkins_payload
 from .dashboard_summary_store import SummarySnapshotStore
 from .exceptions import NotFound
+from .public_names import bucket_display_name
 from .settings import Settings
 from .summary_snapshot import build_summary_snapshot
 
@@ -80,13 +81,20 @@ class ServerAPI:
                 last_event = last_events[0]
                 last_updated = last_event.timestamp + last_event.duration
                 buckets[b]["last_updated"] = last_updated.isoformat()
+            buckets[b]["display_name"] = bucket_display_name(
+                b, buckets[b].get("hostname")
+            )
         return buckets
 
     @check_bucket_exists
     def get_bucket_metadata(self, bucket_id: str) -> Dict[str, Any]:
         """Get metadata about bucket."""
         bucket = self.db[bucket_id]
-        return bucket.metadata()
+        metadata = bucket.metadata()
+        metadata["display_name"] = bucket_display_name(
+            bucket_id, metadata.get("hostname")
+        )
+        return metadata
 
     @check_bucket_exists
     def export_bucket(self, bucket_id: str) -> Dict[str, Any]:
@@ -266,14 +274,14 @@ class ServerAPI:
 
         Such as:
          - Active application and window title
-           - Example: aw-watcher-window
+           - Example: window watcher
          - Currently open document/browser tab/playing song
            - Example: wakatime
-           - Example: aw-watcher-web
-           - Example: aw-watcher-spotify
+           - Example: browser watcher
+           - Example: media watcher
          - Is the user active/inactive?
            Send an event on some interval indicating if the user is active or not.
-           - Example: aw-watcher-afk
+           - Example: presence watcher
 
         Inspired by: https://wakatime.com/developers#heartbeats
         """

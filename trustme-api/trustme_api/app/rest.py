@@ -48,7 +48,13 @@ def host_header_check(f):
 
 
 blueprint = Blueprint("api", __name__, url_prefix="/api")
-api = Api(blueprint, doc="/", decorators=[host_header_check])
+api = Api(
+    blueprint,
+    doc="/",
+    decorators=[host_header_check],
+    title="trust-me API",
+    description="Local API browser for trust-me.",
+)
 
 
 # Loads event and bucket schema from JSONSchema in aw_core
@@ -194,7 +200,7 @@ class BucketResource(Resource):
         args = request.args
         if not current_app.api.testing:
             if "force" not in args or args["force"] != "1":
-                msg = "Deleting buckets is only permitted if aw-server is running in testing mode or if ?force=1"
+                msg = "Deleting buckets is only permitted if the trust-me backend is running in testing mode or if ?force=1"
                 raise Unauthorized("DeleteBucketUnauthorized", msg)
 
         current_app.api.delete_bucket(bucket_id)
@@ -393,7 +399,7 @@ class ExportAllResource(Resource):
         buckets_export = current_app.api.export_all()
         payload = {"buckets": buckets_export}
         response = make_response(json.dumps(payload))
-        filename = "aw-buckets-export.json"
+        filename = "trustme-buckets-export.json"
         response.headers["Content-Disposition"] = "attachment; filename={}".format(
             filename
         )
@@ -409,7 +415,7 @@ class BucketExportResource(Resource):
         bucket_export = current_app.api.export_bucket(bucket_id)
         payload = {"buckets": {bucket_export["id"]: bucket_export}}
         response = make_response(json.dumps(payload))
-        filename = "aw-bucket-export_{}.json".format(bucket_export["id"])
+        filename = "trustme-bucket-export_{}.json".format(bucket_export["id"])
         response.headers["Content-Disposition"] = "attachment; filename={}".format(
             filename
         )
