@@ -40,6 +40,7 @@ class SummarySegment:
     duration: float
     apps: Dict[str, Dict[str, float]]
     categories: Dict[str, Dict[str, Any]]
+    uncategorized_apps: Dict[str, Dict[str, float]]
 
 
 def build_summary_snapshot(
@@ -156,6 +157,7 @@ def _empty_summary_snapshot(category_periods: Sequence[str]) -> Dict[str, Any]:
             "duration": 0,
         },
         "by_period": {period: {"cat_events": []} for period in category_periods},
+        "uncategorized_rows": [],
     }
 
 
@@ -166,6 +168,7 @@ def _empty_summary_segment(logical_period: str, computed_end_ms: float) -> Summa
         duration=0.0,
         apps={},
         categories={},
+        uncategorized_apps={},
     )
 
 
@@ -230,6 +233,13 @@ def _deserialize_segments(raw_segments: Dict[str, Dict[str, Any]]) -> Dict[str, 
                 }
                 for key, entry in (payload.get("categories") or {}).items()
             },
+            uncategorized_apps={
+                app: {
+                    "duration": float(entry.get("duration", 0.0)),
+                    "timestamp_ms": float(entry.get("timestamp_ms", 0.0)),
+                }
+                for app, entry in (payload.get("uncategorized_apps") or {}).items()
+            },
         )
     return segments
 
@@ -239,6 +249,7 @@ def _serialize_summary_segment(segment: SummarySegment) -> Dict[str, Any]:
         "duration": segment.duration,
         "apps": segment.apps,
         "categories": segment.categories,
+        "uncategorized_apps": segment.uncategorized_apps,
     }
 
 
@@ -257,6 +268,13 @@ def _merge_summary_segments(base: SummarySegment, delta: SummarySegment) -> Summ
             "timestamp_ms": float(entry["timestamp_ms"]),
         }
         for key, entry in base.categories.items()
+    }
+    uncategorized_apps = {
+        app: {
+            "duration": float(entry["duration"]),
+            "timestamp_ms": float(entry["timestamp_ms"]),
+        }
+        for app, entry in base.uncategorized_apps.items()
     }
 
     for app, entry in delta.apps.items():
@@ -282,12 +300,24 @@ def _merge_summary_segments(base: SummarySegment, delta: SummarySegment) -> Summ
                 "timestamp_ms": float(entry["timestamp_ms"]),
             }
 
+    for app, entry in delta.uncategorized_apps.items():
+        existing = uncategorized_apps.get(app)
+        if existing:
+            existing["duration"] += float(entry["duration"])
+            existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
+        else:
+            uncategorized_apps[app] = {
+                "duration": float(entry["duration"]),
+                "timestamp_ms": float(entry["timestamp_ms"]),
+            }
+
     return SummarySegment(
         logical_period=base.logical_period,
         computed_end_ms=max(base.computed_end_ms, delta.computed_end_ms),
         duration=base.duration + delta.duration,
         apps=apps,
         categories=categories,
+        uncategorized_apps=uncategorized_apps,
     )
 
 
@@ -337,6 +367,7 @@ def _build_summary_segment(
 
     app_durations: Dict[str, Dict[str, float]] = {}
     category_durations: Dict[str, Dict[str, Any]] = {}
+    uncategorized_apps: Dict[str, Dict[str, float]] = {}
     total_duration = 0.0
     interval_index = 0
 
@@ -365,6 +396,7 @@ def _build_summary_segment(
                 allowed_categories,
                 app_durations,
                 category_durations,
+                uncategorized_apps,
                 [],
                 [],
             )
@@ -384,6 +416,7 @@ def _build_summary_segment(
             allowed_categories,
             app_durations,
             category_durations,
+            uncategorized_apps,
             [],
             [],
         )
@@ -394,6 +427,7 @@ def _build_summary_segment(
         duration=total_duration,
         apps=app_durations,
         categories=category_durations,
+        uncategorized_apps=uncategorized_apps,
     )
 
 
@@ -403,6 +437,7 @@ def _build_snapshot_response(
 ) -> Dict[str, Any]:
     app_durations: Dict[str, Dict[str, float]] = {}
     category_durations: Dict[str, Dict[str, Any]] = {}
+    uncategorized_apps: Dict[str, Dict[str, float]] = {}
     total_duration = 0.0
     by_period: Dict[str, Dict[str, Any]] = {}
 
@@ -433,6 +468,19 @@ def _build_snapshot_response(
             else:
                 category_durations[key] = {
                     "category": list(entry["category"]),
+                    "duration": float(entry["duration"]),
+                    "timestamp_ms": float(entry["timestamp_ms"]),
+                }
+
+        for app, entry in segment.uncategorized_apps.items():
+            existing_uncategorized = uncategorized_apps.get(app)
+            if existing_uncategorized:
+                existing_uncategorized["duration"] += entry["duration"]
+                existing_uncategorized["timestamp_ms"] = min(
+                    existing_uncategorized["timestamp_ms"], entry["timestamp_ms"]
+                )
+            else:
+                uncategorized_apps[app] = {
                     "duration": float(entry["duration"]),
                     "timestamp_ms": float(entry["timestamp_ms"]),
                 }
@@ -477,6 +525,19 @@ def _build_snapshot_response(
             "duration": total_duration,
         },
         "by_period": by_period,
+        "uncategorized_rows": [
+            {
+                "key": app,
+                "app": app,
+                "title": app,
+                "subtitle": "",
+                "duration": entry["duration"],
+                "matchText": app,
+            }
+            for app, entry in sorted(
+                uncategorized_apps.items(), key=lambda item: item[1]["duration"], reverse=True
+            )[:LOCAL_AGGREGATION_LIMIT]
+        ],
     }
 
 
@@ -732,6 +793,7 @@ def _accumulate_slice(
     allowed_categories: Optional[set],
     app_durations: Dict[str, Dict[str, float]],
     category_durations: Dict[str, Dict[str, Any]],
+    uncategorized_apps: Dict[str, Dict[str, float]],
     period_bounds: Sequence[PeriodBound],
     by_period_maps: Sequence[Dict[str, Dict[str, Any]]],
 ) -> float:
@@ -741,6 +803,22 @@ def _accumulate_slice(
     duration = (end_ms - start_ms) / 1000
     category = _resolve_category_for_data(data, compiled_rules)
     category_key = json.dumps(category)
+    app = data.get("app").strip() if isinstance(data.get("app"), str) else ""
+
+    # Uncategorized management should ignore current category filters so the UI can
+    # always show unresolved apps even when the active view is filtered.
+    if category == UNCATEGORIZED_CATEGORY_NAME and app:
+        existing_uncategorized = uncategorized_apps.get(app)
+        if existing_uncategorized:
+            existing_uncategorized["duration"] += duration
+            existing_uncategorized["timestamp_ms"] = min(
+                existing_uncategorized["timestamp_ms"], start_ms
+            )
+        else:
+            uncategorized_apps[app] = {
+                "duration": duration,
+                "timestamp_ms": start_ms,
+            }
 
     if allowed_categories is not None and category_key not in allowed_categories:
         return 0.0
@@ -756,7 +834,6 @@ def _accumulate_slice(
             "timestamp_ms": start_ms,
         }
 
-    app = data.get("app").strip() if isinstance(data.get("app"), str) else ""
     if app:
         existing_app = app_durations.get(app)
         if existing_app:

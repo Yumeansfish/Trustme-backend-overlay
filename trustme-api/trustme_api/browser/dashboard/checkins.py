@@ -58,6 +58,7 @@ def resolve_checkins_data_dir() -> Path:
 
 def build_checkins_payload(*, date_filter: Optional[str] = None) -> Dict[str, Any]:
     data_dir = resolve_checkins_data_dir()
+    all_files = _list_checkin_files(data_dir, date_filter=None)
     files = _list_checkin_files(data_dir, date_filter=date_filter)
     sessions: List[Dict[str, Any]] = []
     for file_path in files:
@@ -66,7 +67,7 @@ def build_checkins_payload(*, date_filter: Optional[str] = None) -> Dict[str, An
     sessions.sort(key=lambda session: session["started_at"], reverse=True)
     return {
         "data_source": str(data_dir),
-        "available_dates": [file_path.name for file_path in files],
+        "available_dates": [file_path.name for file_path in all_files],
         "sessions": sessions,
     }
 

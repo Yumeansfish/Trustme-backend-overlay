@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, Optional
 from aw_core.dirs import get_data_dir
 
 
-SNAPSHOT_STORE_SCHEMA_VERSION = 1
+SNAPSHOT_STORE_SCHEMA_VERSION = 2
 
 
 class SummarySnapshotStore:
