@@ -100,3 +100,8 @@ class SummarySnapshotStore:
                 ),
             )
             connection.commit()
+
+    def clear(self) -> None:
+        with closing(self._connect()) as connection:
+            connection.execute("DELETE FROM summary_segments")
+            connection.commit()

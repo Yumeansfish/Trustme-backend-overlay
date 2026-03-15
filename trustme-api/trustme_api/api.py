@@ -29,6 +29,15 @@ from .summary_snapshot import build_summary_snapshot
 
 logger = logging.getLogger(__name__)
 
+SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS = {
+    "startOfDay",
+    "startOfWeek",
+    "classes",
+    "deviceMappings",
+    "always_active_pattern",
+    "alwaysActivePattern",
+}
+
 
 def get_device_id() -> str:
     path = Path(get_data_dir("aw-server")) / "device_id"
@@ -407,5 +416,15 @@ class ServerAPI:
 
     def set_setting(self, key, value):
         """Set a setting"""
+        previous_value = self.settings.get(key, None)
         self.settings[key] = value
+        if (
+            key in SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS
+            and previous_value != value
+        ):
+            logger.info(
+                "Clearing dashboard summary snapshots after settings change: %s",
+                key,
+            )
+            self.summary_snapshot_store.clear()
         return value

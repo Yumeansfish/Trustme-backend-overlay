@@ -103,10 +103,14 @@ def build_dashboard_summary_warmup_jobs(
     if not effective_mappings:
         return []
 
-    start_of_day = str(settings_data.get("startOfDay") or "04:00")
+    start_of_day = str(settings_data.get("startOfDay") or "09:00")
     start_of_week = str(settings_data.get("startOfWeek") or "Monday")
     categories = _settings_to_query_categories(settings_data.get("classes") or [])
-    always_active_pattern = str(settings_data.get("alwaysActivePattern") or "")
+    always_active_pattern = str(
+        settings_data.get("always_active_pattern")
+        or settings_data.get("alwaysActivePattern")
+        or ""
+    )
     periods = _build_current_summary_warmup_periods(
         now_local=now_local,
         start_of_day=start_of_day,
