@@ -2,7 +2,7 @@ import json
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from aw_core.dirs import get_data_dir
 
@@ -71,6 +71,49 @@ class SummarySnapshotStore:
             for row in rows
         }
 
+    def list_segments(
+        self,
+        *,
+        scope_key: Optional[str] = None,
+        logical_periods: Optional[Iterable[str]] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        where_sql, params = self._build_where(scope_key, logical_periods)
+        query = (
+            "SELECT scope_key, logical_period, computed_end, stored_at "
+            "FROM summary_segments "
+            f"{where_sql} "
+            "ORDER BY stored_at DESC, logical_period ASC "
+            "LIMIT ?"
+        )
+
+        with closing(self._connect()) as connection:
+            rows = connection.execute(query, [*params, int(limit)]).fetchall()
+
+        return [
+            {
+                "scope_key": row["scope_key"],
+                "logical_period": row["logical_period"],
+                "computed_end": row["computed_end"],
+                "stored_at": row["stored_at"],
+            }
+            for row in rows
+        ]
+
+    def count_segments(
+        self,
+        *,
+        scope_key: Optional[str] = None,
+        logical_periods: Optional[Iterable[str]] = None,
+    ) -> int:
+        where_sql, params = self._build_where(scope_key, logical_periods)
+        query = f"SELECT COUNT(*) AS count FROM summary_segments {where_sql}"
+
+        with closing(self._connect()) as connection:
+            row = connection.execute(query, params).fetchone()
+
+        return int(row["count"] if row else 0)
+
     def put_segment(
         self,
         scope_key: str,
@@ -105,3 +148,40 @@ class SummarySnapshotStore:
         with closing(self._connect()) as connection:
             connection.execute("DELETE FROM summary_segments")
             connection.commit()
+
+    def delete_segments(
+        self,
+        *,
+        scope_key: Optional[str] = None,
+        logical_periods: Optional[Iterable[str]] = None,
+    ) -> int:
+        where_sql, params = self._build_where(scope_key, logical_periods)
+        query = f"DELETE FROM summary_segments {where_sql}"
+
+        with closing(self._connect()) as connection:
+            cursor = connection.execute(query, params)
+            connection.commit()
+            return int(cursor.rowcount or 0)
+
+    def _build_where(
+        self,
+        scope_key: Optional[str],
+        logical_periods: Optional[Iterable[str]],
+    ) -> Tuple[str, List[Any]]:
+        filters = []
+        params: List[Any] = []
+
+        if scope_key:
+            filters.append("scope_key = ?")
+            params.append(scope_key)
+
+        periods = list(dict.fromkeys(logical_periods or []))
+        if periods:
+            placeholders = ",".join("?" for _ in periods)
+            filters.append(f"logical_period IN ({placeholders})")
+            params.extend(periods)
+
+        if not filters:
+            return "", params
+
+        return "WHERE " + " AND ".join(filters), params

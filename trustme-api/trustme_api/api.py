@@ -21,6 +21,7 @@ from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
 from .checkins import build_checkins_payload
+from .dashboard_dto import CheckinsResponse, SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
 from .exceptions import NotFound
 from .public_names import bucket_display_name
@@ -382,7 +383,7 @@ class ServerAPI:
         categories: List[Any],
         filter_categories: List[List[str]],
         always_active_pattern: str = "",
-    ) -> Dict[str, Any]:
+    ) -> SummarySnapshotResponse:
         return build_summary_snapshot(
             self.db,
             range_start=range_start,
@@ -398,7 +399,7 @@ class ServerAPI:
             store=self.summary_snapshot_store,
         )
 
-    def get_checkins(self, *, date_filter: Optional[str] = None) -> Dict[str, Any]:
+    def get_checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
         return build_checkins_payload(date_filter=date_filter)
 
     # TODO: Right now the log format on disk has to be JSON, this is hard to read by humans...

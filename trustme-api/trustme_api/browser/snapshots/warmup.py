@@ -54,7 +54,13 @@ def start_dashboard_summary_warmup(server_api) -> threading.Thread:
     return worker
 
 
-def warm_dashboard_summary_snapshots(server_api, *, now: Optional[datetime] = None) -> int:
+def warm_dashboard_summary_snapshots(
+    server_api,
+    *,
+    now: Optional[datetime] = None,
+    group_names: Optional[Sequence[str]] = None,
+    period_names: Optional[Sequence[str]] = None,
+) -> int:
     server_api.settings.load()
     settings_data = server_api.settings.get("")
     bucket_records = _build_bucket_records(server_api.get_buckets())
@@ -63,6 +69,12 @@ def warm_dashboard_summary_snapshots(server_api, *, now: Optional[datetime] = No
         bucket_records=bucket_records,
         now=now,
     )
+    allowed_groups = set(group_names or [])
+    allowed_periods = set(period_names or [])
+    if allowed_groups:
+        jobs = [job for job in jobs if job.group_name in allowed_groups]
+    if allowed_periods:
+        jobs = [job for job in jobs if job.period_name in allowed_periods]
 
     for job in jobs:
         build_summary_snapshot(

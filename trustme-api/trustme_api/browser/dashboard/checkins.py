@@ -7,6 +7,8 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from aw_core.dirs import get_data_dir
 
+from .dashboard_dto import CheckinsResponse
+
 
 CHECKIN_SESSION_GAP = timedelta(minutes=10)
 LOCAL_TZ = datetime.now().astimezone().tzinfo
@@ -56,7 +58,7 @@ def resolve_checkins_data_dir() -> Path:
     return bundled_dir
 
 
-def build_checkins_payload(*, date_filter: Optional[str] = None) -> Dict[str, Any]:
+def build_checkins_payload(*, date_filter: Optional[str] = None) -> CheckinsResponse:
     data_dir = resolve_checkins_data_dir()
     all_files = _list_checkin_files(data_dir, date_filter=None)
     files = _list_checkin_files(data_dir, date_filter=date_filter)

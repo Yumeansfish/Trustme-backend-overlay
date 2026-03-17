@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from aw_core.models import Event
 
+from .dashboard_dto import SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
 
 
@@ -58,7 +59,7 @@ def build_summary_snapshot(
     always_active_pattern: str = "",
     store: Optional[SummarySnapshotStore] = None,
     now: Optional[datetime] = None,
-) -> Dict[str, Any]:
+) -> SummarySnapshotResponse:
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -147,7 +148,7 @@ def build_summary_snapshot(
     return _build_snapshot_response(period_bounds, segments)
 
 
-def _empty_summary_snapshot(category_periods: Sequence[str]) -> Dict[str, Any]:
+def _empty_summary_snapshot(category_periods: Sequence[str]) -> SummarySnapshotResponse:
     return {
         "window": {
             "app_events": [],
@@ -434,7 +435,7 @@ def _build_summary_segment(
 def _build_snapshot_response(
     period_bounds: Sequence[PeriodBound],
     segments: Dict[str, SummarySegment],
-) -> Dict[str, Any]:
+) -> SummarySnapshotResponse:
     app_durations: Dict[str, Dict[str, float]] = {}
     category_durations: Dict[str, Dict[str, Any]] = {}
     uncategorized_apps: Dict[str, Dict[str, float]] = {}
