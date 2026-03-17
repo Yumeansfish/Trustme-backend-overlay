@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from socket import gethostname
@@ -21,8 +22,10 @@ from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
 from .checkins import build_checkins_payload
+from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
 from .dashboard_dto import CheckinsResponse, SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
+from .dashboard_summary_warmup import build_bucket_records
 from .exceptions import NotFound
 from .public_names import bucket_display_name
 from .settings import Settings
@@ -417,15 +420,21 @@ class ServerAPI:
 
     def set_setting(self, key, value):
         """Set a setting"""
-        previous_value = self.settings.get(key, None)
+        previous_settings = deepcopy(self.settings.get("", {}))
+        previous_value = previous_settings.get(key, None)
         self.settings[key] = value
         if (
             key in SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS
             and previous_value != value
         ):
-            logger.info(
-                "Clearing dashboard summary snapshots after settings change: %s",
-                key,
+            deleted = invalidate_summary_snapshots_for_settings(
+                store=self.summary_snapshot_store,
+                settings_data=previous_settings,
+                bucket_records=build_bucket_records(self.get_buckets()),
             )
-            self.summary_snapshot_store.clear()
+            logger.info(
+                "Invalidated dashboard summary snapshots after settings change: %s",
+                key,
+                extra={"deleted_segments": deleted},
+            )
         return value

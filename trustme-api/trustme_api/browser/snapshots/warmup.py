@@ -63,7 +63,7 @@ def warm_dashboard_summary_snapshots(
 ) -> int:
     server_api.settings.load()
     settings_data = server_api.settings.get("")
-    bucket_records = _build_bucket_records(server_api.get_buckets())
+    bucket_records = build_bucket_records(server_api.get_buckets())
     jobs = build_dashboard_summary_warmup_jobs(
         settings_data=settings_data,
         bucket_records=bucket_records,
@@ -310,7 +310,7 @@ def _add_months(start: datetime, count: int) -> datetime:
     return start.replace(year=year, month=month)
 
 
-def _build_bucket_records(raw_buckets: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def build_bucket_records(raw_buckets: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
     records = []
     for bucket_id, bucket in raw_buckets.items():
         record = dict(bucket)

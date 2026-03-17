@@ -209,6 +209,27 @@ def _build_snapshot_scope_key(
     return digest.hexdigest()
 
 
+def build_summary_snapshot_scope_key(
+    *,
+    window_buckets: Sequence[str],
+    afk_buckets: Sequence[str],
+    stopwatch_buckets: Sequence[str],
+    filter_afk: bool,
+    categories: Sequence[Any],
+    filter_categories: Sequence[Sequence[str]],
+    always_active_pattern: str,
+) -> str:
+    return _build_snapshot_scope_key(
+        window_buckets=window_buckets,
+        afk_buckets=afk_buckets,
+        stopwatch_buckets=stopwatch_buckets,
+        filter_afk=filter_afk,
+        categories=categories,
+        filter_categories=filter_categories,
+        always_active_pattern=always_active_pattern,
+    )
+
+
 def _deserialize_segments(raw_segments: Dict[str, Dict[str, Any]]) -> Dict[str, SummarySegment]:
     segments = {}
     for logical_period, row in raw_segments.items():
