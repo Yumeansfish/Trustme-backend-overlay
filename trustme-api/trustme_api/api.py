@@ -24,7 +24,12 @@ from .__about__ import __version__
 from .checkins import build_checkins_payload
 from .dashboard_domain_service import build_ad_hoc_summary_scope
 from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
-from .dashboard_dto import CheckinsResponse, SummarySnapshotResponse
+from .dashboard_dto import (
+    CheckinsResponse,
+    SummarySnapshotResponse,
+    serialize_checkins_response,
+    serialize_summary_snapshot_response,
+)
 from .dashboard_summary_store import SummarySnapshotStore
 from .dashboard_summary_warmup import build_bucket_records
 from .exceptions import BadRequest, NotFound
@@ -397,17 +402,20 @@ class ServerAPI:
             filter_categories=filter_categories,
             always_active_pattern=always_active_pattern,
         )
-        return build_summary_snapshot_from_scope(
-            self.db,
-            range_start=range_start,
-            range_end=range_end,
+        return serialize_summary_snapshot_response(
+            build_summary_snapshot_from_scope(
+                self.db,
+                range_start=range_start,
+                range_end=range_end,
+                category_periods=category_periods,
+                scope=scope,
+                store=self.summary_snapshot_store,
+            ),
             category_periods=category_periods,
-            scope=scope,
-            store=self.summary_snapshot_store,
         )
 
     def get_checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
-        return build_checkins_payload(date_filter=date_filter)
+        return serialize_checkins_response(build_checkins_payload(date_filter=date_filter))
 
     # TODO: Right now the log format on disk has to be JSON, this is hard to read by humans...
     def get_log(self):

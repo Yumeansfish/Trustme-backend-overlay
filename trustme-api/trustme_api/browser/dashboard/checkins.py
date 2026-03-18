@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from aw_core.dirs import get_data_dir
 
-from .dashboard_dto import CheckinsResponse
+from .dashboard_dto import CheckinsResponse, serialize_checkins_response
 
 
 CHECKIN_SESSION_GAP = timedelta(minutes=10)
@@ -67,11 +67,13 @@ def build_checkins_payload(*, date_filter: Optional[str] = None) -> CheckinsResp
         sessions.extend(_parse_sessions_from_file(file_path))
 
     sessions.sort(key=lambda session: session["started_at"], reverse=True)
-    return {
-        "data_source": str(data_dir),
-        "available_dates": [file_path.name for file_path in all_files],
-        "sessions": sessions,
-    }
+    return serialize_checkins_response(
+        {
+            "data_source": str(data_dir),
+            "available_dates": [file_path.name for file_path in all_files],
+            "sessions": sessions,
+        }
+    )
 
 
 def _list_checkin_files(data_dir: Path, *, date_filter: Optional[str]) -> List[Path]:

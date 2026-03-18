@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Sequence
 
-from .dashboard_dto import SummarySnapshotResponse
+from .dashboard_dto import SummarySnapshotResponse, serialize_summary_snapshot_response
 from .summary_snapshot_models import (
     LOCAL_AGGREGATION_LIMIT,
     PeriodBound,
@@ -11,17 +11,20 @@ from .summary_snapshot_models import (
 
 
 def empty_summary_snapshot(category_periods: Sequence[str]) -> SummarySnapshotResponse:
-    return {
-        "window": {
-            "app_events": [],
-            "title_events": [],
-            "cat_events": [],
-            "active_events": [],
-            "duration": 0,
+    return serialize_summary_snapshot_response(
+        {
+            "window": {
+                "app_events": [],
+                "title_events": [],
+                "cat_events": [],
+                "active_events": [],
+                "duration": 0,
+            },
+            "by_period": {period: {"cat_events": []} for period in category_periods},
+            "uncategorized_rows": [],
         },
-        "by_period": {period: {"cat_events": []} for period in category_periods},
-        "uncategorized_rows": [],
-    }
+        category_periods=category_periods,
+    )
 
 
 def deserialize_segments(raw_segments: Dict[str, Dict[str, Any]]) -> Dict[str, SummarySegment]:
@@ -206,45 +209,50 @@ def build_snapshot_response(
             ]
         }
 
-    return {
-        "window": {
-            "app_events": [
-                build_event_json(entry["timestamp_ms"], entry["duration"], {"app": app})
+    return serialize_summary_snapshot_response(
+        {
+            "window": {
+                "app_events": [
+                    build_event_json(entry["timestamp_ms"], entry["duration"], {"app": app})
+                    for app, entry in sorted(
+                        app_durations.items(), key=lambda item: item[1]["duration"], reverse=True
+                    )[:LOCAL_AGGREGATION_LIMIT]
+                ],
+                "title_events": [],
+                "cat_events": [
+                    build_event_json(
+                        entry["timestamp_ms"],
+                        entry["duration"],
+                        {"$category": entry["category"]},
+                    )
+                    for entry in sorted(
+                        category_durations.values(),
+                        key=lambda item: item["duration"],
+                        reverse=True,
+                    )[:LOCAL_AGGREGATION_LIMIT]
+                ],
+                "active_events": [],
+                "duration": total_duration,
+            },
+            "by_period": by_period,
+            "uncategorized_rows": [
+                {
+                    "key": app,
+                    "app": app,
+                    "title": app,
+                    "subtitle": "",
+                    "duration": entry["duration"],
+                    "matchText": app,
+                }
                 for app, entry in sorted(
-                    app_durations.items(), key=lambda item: item[1]["duration"], reverse=True
-                )[:LOCAL_AGGREGATION_LIMIT]
-            ],
-            "title_events": [],
-            "cat_events": [
-                build_event_json(
-                    entry["timestamp_ms"],
-                    entry["duration"],
-                    {"$category": entry["category"]},
-                )
-                for entry in sorted(
-                    category_durations.values(),
-                    key=lambda item: item["duration"],
+                    uncategorized_apps.items(),
+                    key=lambda item: item[1]["duration"],
                     reverse=True,
                 )[:LOCAL_AGGREGATION_LIMIT]
             ],
-            "active_events": [],
-            "duration": total_duration,
         },
-        "by_period": by_period,
-        "uncategorized_rows": [
-            {
-                "key": app,
-                "app": app,
-                "title": app,
-                "subtitle": "",
-                "duration": entry["duration"],
-                "matchText": app,
-            }
-            for app, entry in sorted(
-                uncategorized_apps.items(), key=lambda item: item[1]["duration"], reverse=True
-            )[:LOCAL_AGGREGATION_LIMIT]
-        ],
-    }
+        category_periods=[period.key for period in period_bounds],
+    )
 
 
 def build_event_json(timestamp_ms: float, duration: float, data: Dict[str, Any]) -> Dict[str, Any]:
