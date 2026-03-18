@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import re
 from copy import deepcopy
@@ -78,8 +80,12 @@ def _normalize_terms(values: Any) -> List[str]:
 
 
 def _build_boundary_pattern(values: List[str]) -> List[str]:
+    def compile_literal(value: str) -> str:
+        escaped = _escape_regex_literal(value)
+        return escaped.replace(r"\ ", r"\\s+")
+
     return [
-        rf"(?:^|[^A-Za-z0-9]){_escape_regex_literal(value).replace(r'\ ', r'\\s+')}(?:$|[^A-Za-z0-9])"
+        rf"(?:^|[^A-Za-z0-9]){compile_literal(value)}(?:$|[^A-Za-z0-9])"
         for value in values
     ]
 
