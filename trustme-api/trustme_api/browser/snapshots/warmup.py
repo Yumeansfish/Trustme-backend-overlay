@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 from zoneinfo import ZoneInfo
 
+from .settings_schema import normalize_settings_data
 from .summary_snapshot import build_summary_snapshot
 
 
@@ -102,27 +103,21 @@ def build_dashboard_summary_warmup_jobs(
     now: Optional[datetime] = None,
     local_timezone: Optional[ZoneInfo] = None,
 ) -> List[SummaryWarmupJob]:
+    settings_data, _ = normalize_settings_data(settings_data)
     tz = local_timezone or _resolve_local_timezone()
     now_local = _normalize_now(now, tz)
     known_hosts = _extract_known_hosts(bucket_records)
     if not known_hosts:
         return []
 
-    effective_mappings = _get_effective_device_mappings(
-        settings_data.get("deviceMappings"),
-        known_hosts,
-    )
+    effective_mappings = _get_effective_device_mappings(settings_data["deviceMappings"], known_hosts)
     if not effective_mappings:
         return []
 
-    start_of_day = str(settings_data.get("startOfDay") or "09:00")
-    start_of_week = str(settings_data.get("startOfWeek") or "Monday")
-    categories = _settings_to_query_categories(settings_data.get("classes") or [])
-    always_active_pattern = str(
-        settings_data.get("always_active_pattern")
-        or settings_data.get("alwaysActivePattern")
-        or ""
-    )
+    start_of_day = str(settings_data["startOfDay"])
+    start_of_week = str(settings_data["startOfWeek"])
+    categories = _settings_to_query_categories(settings_data["classes"])
+    always_active_pattern = str(settings_data["always_active_pattern"])
     periods = _build_current_summary_warmup_periods(
         now_local=now_local,
         start_of_day=start_of_day,

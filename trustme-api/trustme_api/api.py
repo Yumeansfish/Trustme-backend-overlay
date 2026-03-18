@@ -26,9 +26,10 @@ from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_set
 from .dashboard_dto import CheckinsResponse, SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
 from .dashboard_summary_warmup import build_bucket_records
-from .exceptions import NotFound
+from .exceptions import BadRequest, NotFound
 from .public_names import bucket_display_name
 from .settings import Settings
+from .settings_schema import canonicalize_setting_key
 from .summary_snapshot import build_summary_snapshot
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,6 @@ SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS = {
     "classes",
     "deviceMappings",
     "always_active_pattern",
-    "alwaysActivePattern",
 }
 
 
@@ -421,11 +421,15 @@ class ServerAPI:
     def set_setting(self, key, value):
         """Set a setting"""
         previous_settings = deepcopy(self.settings.get("", {}))
-        previous_value = previous_settings.get(key, None)
-        self.settings[key] = value
+        try:
+            normalized_key, normalized_value = self.settings.set(key, value)
+        except ValueError as exc:
+            raise BadRequest("InvalidSettingValue", str(exc)) from exc
+
+        previous_value = previous_settings.get(canonicalize_setting_key(normalized_key), None)
         if (
-            key in SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS
-            and previous_value != value
+            normalized_key in SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS
+            and previous_value != normalized_value
         ):
             deleted = invalidate_summary_snapshots_for_settings(
                 store=self.summary_snapshot_store,
@@ -434,7 +438,7 @@ class ServerAPI:
             )
             logger.info(
                 "Invalidated dashboard summary snapshots after settings change: %s",
-                key,
+                normalized_key,
                 extra={"deleted_segments": deleted},
             )
-        return value
+        return normalized_value
