@@ -22,6 +22,7 @@ from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
 from .checkins import build_checkins_payload
+from .dashboard_domain_service import build_ad_hoc_summary_scope
 from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
 from .dashboard_dto import CheckinsResponse, SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
@@ -30,7 +31,7 @@ from .exceptions import BadRequest, NotFound
 from .public_names import bucket_display_name
 from .settings import Settings
 from .settings_schema import canonicalize_setting_key
-from .summary_snapshot import build_summary_snapshot
+from .summary_snapshot import build_summary_snapshot_from_scope
 
 logger = logging.getLogger(__name__)
 
@@ -387,11 +388,7 @@ class ServerAPI:
         filter_categories: List[List[str]],
         always_active_pattern: str = "",
     ) -> SummarySnapshotResponse:
-        return build_summary_snapshot(
-            self.db,
-            range_start=range_start,
-            range_end=range_end,
-            category_periods=category_periods,
+        scope = build_ad_hoc_summary_scope(
             window_buckets=window_buckets,
             afk_buckets=afk_buckets,
             stopwatch_buckets=stopwatch_buckets,
@@ -399,6 +396,13 @@ class ServerAPI:
             categories=categories,
             filter_categories=filter_categories,
             always_active_pattern=always_active_pattern,
+        )
+        return build_summary_snapshot_from_scope(
+            self.db,
+            range_start=range_start,
+            range_end=range_end,
+            category_periods=category_periods,
+            scope=scope,
             store=self.summary_snapshot_store,
         )
 

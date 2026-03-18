@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Sequence
 
+from .dashboard_domain_service import DashboardSummaryScope, build_ad_hoc_summary_scope
 from .dashboard_dto import SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
 from .summary_snapshot_categories import compile_category_rules, normalize_category_name
@@ -37,6 +38,36 @@ def build_summary_snapshot(
     store: Optional[SummarySnapshotStore] = None,
     now: Optional[datetime] = None,
 ) -> SummarySnapshotResponse:
+    scope = build_ad_hoc_summary_scope(
+        window_buckets=window_buckets,
+        afk_buckets=afk_buckets,
+        stopwatch_buckets=stopwatch_buckets,
+        filter_afk=filter_afk,
+        categories=categories,
+        filter_categories=filter_categories,
+        always_active_pattern=always_active_pattern,
+    )
+    return build_summary_snapshot_from_scope(
+        db,
+        range_start=range_start,
+        range_end=range_end,
+        category_periods=category_periods,
+        scope=scope,
+        store=store,
+        now=now,
+    )
+
+
+def build_summary_snapshot_from_scope(
+    db,
+    *,
+    range_start: datetime,
+    range_end: datetime,
+    category_periods: Sequence[str],
+    scope: DashboardSummaryScope,
+    store: Optional[SummarySnapshotStore] = None,
+    now: Optional[datetime] = None,
+) -> SummarySnapshotResponse:
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -47,21 +78,21 @@ def build_summary_snapshot(
     period_bounds = build_period_bounds(category_periods)
 
     allowed_categories = (
-        {json.dumps(normalize_category_name(category)) for category in filter_categories}
-        if filter_categories
+        {json.dumps(normalize_category_name(category)) for category in scope.filter_categories}
+        if scope.filter_categories
         else None
     )
     if range_end <= range_start or not period_bounds:
         return empty_summary_snapshot(category_periods)
 
     scope_key = build_summary_snapshot_scope_key(
-        window_buckets=window_buckets,
-        afk_buckets=afk_buckets,
-        stopwatch_buckets=stopwatch_buckets,
-        filter_afk=filter_afk,
-        categories=categories,
-        filter_categories=filter_categories,
-        always_active_pattern=always_active_pattern,
+        window_buckets=scope.window_buckets,
+        afk_buckets=scope.afk_buckets,
+        stopwatch_buckets=scope.stopwatch_buckets,
+        filter_afk=scope.filter_afk,
+        categories=scope.categories,
+        filter_categories=scope.filter_categories,
+        always_active_pattern=scope.always_active_pattern,
     )
     cached_segments = (
         deserialize_segments(store.get_segments(scope_key, [period.key for period in period_bounds]))
@@ -91,7 +122,7 @@ def build_summary_snapshot(
             working_segment = cached_segment
 
         if compiled_rules is None:
-            compiled_rules = compile_category_rules(categories)
+            compiled_rules = compile_category_rules(scope.categories)
 
         compute_start = datetime.fromtimestamp(compute_start_ms / 1000, tz=timezone.utc)
         compute_end = datetime.fromtimestamp(effective_end_ms / 1000, tz=timezone.utc)
@@ -100,13 +131,13 @@ def build_summary_snapshot(
             logical_period=period.key,
             segment_start=compute_start,
             segment_end=compute_end,
-            window_buckets=window_buckets,
-            afk_buckets=afk_buckets,
-            stopwatch_buckets=stopwatch_buckets,
-            filter_afk=filter_afk,
+            window_buckets=scope.window_buckets,
+            afk_buckets=scope.afk_buckets,
+            stopwatch_buckets=scope.stopwatch_buckets,
+            filter_afk=scope.filter_afk,
             compiled_rules=compiled_rules,
             allowed_categories=allowed_categories,
-            always_active_pattern=always_active_pattern,
+            always_active_pattern=scope.always_active_pattern,
         )
         merged_segment = merge_summary_segments(working_segment, delta_segment)
         segments[period.key] = merged_segment

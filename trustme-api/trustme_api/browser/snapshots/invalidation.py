@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from .dashboard_domain_service import DashboardSummaryScope
 from .dashboard_summary_store import SummarySnapshotStore
 from .dashboard_summary_warmup import (
     SummaryWarmupJob,
@@ -70,12 +71,16 @@ def invalidate_summary_snapshots_for_settings(
 
 
 def _scope_key_for_job(job: SummaryWarmupJob) -> str:
+    return _scope_key_for_scope(job.scope)
+
+
+def _scope_key_for_scope(scope: DashboardSummaryScope) -> str:
     return build_summary_snapshot_scope_key(
-        window_buckets=job.window_buckets,
-        afk_buckets=job.afk_buckets,
-        stopwatch_buckets=job.stopwatch_buckets,
-        filter_afk=job.filter_afk,
-        categories=job.categories,
-        filter_categories=job.filter_categories,
-        always_active_pattern=job.always_active_pattern,
+        window_buckets=scope.window_buckets,
+        afk_buckets=scope.afk_buckets,
+        stopwatch_buckets=scope.stopwatch_buckets,
+        filter_afk=scope.filter_afk,
+        categories=scope.categories,
+        filter_categories=scope.filter_categories,
+        always_active_pattern=scope.always_active_pattern,
     )
