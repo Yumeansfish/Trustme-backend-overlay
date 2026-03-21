@@ -22,13 +22,20 @@ from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
 from .checkins import build_checkins_payload
-from .dashboard_domain_service import build_ad_hoc_summary_scope
+from .dashboard_api_service import (
+    build_dashboard_details_response,
+    build_dashboard_scope_response,
+    build_default_dashboard_hosts_response,
+    build_summary_snapshot_response,
+)
 from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
 from .dashboard_dto import (
+    DashboardDetailsResponse,
+    DashboardDefaultHostsResponse,
+    DashboardScopeResponse,
     CheckinsResponse,
     SummarySnapshotResponse,
     serialize_checkins_response,
-    serialize_summary_snapshot_response,
 )
 from .dashboard_summary_store import SummarySnapshotStore
 from .dashboard_summary_warmup import build_bucket_records
@@ -36,7 +43,6 @@ from .exceptions import BadRequest, NotFound
 from .public_names import bucket_display_name
 from .settings import Settings
 from .settings_schema import canonicalize_setting_key
-from .summary_snapshot import build_summary_snapshot_from_scope
 
 logger = logging.getLogger(__name__)
 
@@ -389,33 +395,67 @@ class ServerAPI:
         afk_buckets: List[str],
         stopwatch_buckets: List[str],
         filter_afk: bool,
-        categories: List[Any],
         filter_categories: List[List[str]],
-        always_active_pattern: str = "",
+        categories: Optional[List[Any]] = None,
+        always_active_pattern: Optional[str] = None,
     ) -> SummarySnapshotResponse:
-        scope = build_ad_hoc_summary_scope(
+        return build_summary_snapshot_response(
+            db=self.db,
+            settings_data=self.settings.get(""),
+            summary_snapshot_store=self.summary_snapshot_store,
+            range_start=range_start,
+            range_end=range_end,
+            category_periods=category_periods,
             window_buckets=window_buckets,
             afk_buckets=afk_buckets,
             stopwatch_buckets=stopwatch_buckets,
             filter_afk=filter_afk,
-            categories=categories,
             filter_categories=filter_categories,
+            categories=categories,
             always_active_pattern=always_active_pattern,
-        )
-        return serialize_summary_snapshot_response(
-            build_summary_snapshot_from_scope(
-                self.db,
-                range_start=range_start,
-                range_end=range_end,
-                category_periods=category_periods,
-                scope=scope,
-                store=self.summary_snapshot_store,
-            ),
-            category_periods=category_periods,
         )
 
     def get_checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
         return serialize_checkins_response(build_checkins_payload(date_filter=date_filter))
+
+    def resolve_dashboard_scope(
+        self,
+        *,
+        requested_hosts: List[str],
+        range_start: Optional[datetime] = None,
+        range_end: Optional[datetime] = None,
+    ) -> DashboardScopeResponse:
+        return build_dashboard_scope_response(
+            settings_data=self.settings.get(""),
+            bucket_records=build_bucket_records(self.get_buckets()),
+            requested_hosts=requested_hosts,
+            range_start=range_start,
+            range_end=range_end,
+        )
+
+    def default_dashboard_hosts(self) -> DashboardDefaultHostsResponse:
+        return build_default_dashboard_hosts_response(
+            settings_data=self.settings.get(""),
+            bucket_records=build_bucket_records(self.get_buckets()),
+        )
+
+    def dashboard_details(
+        self,
+        *,
+        range_start: datetime,
+        range_end: datetime,
+        window_buckets: List[str],
+        browser_buckets: List[str],
+        stopwatch_buckets: List[str],
+    ) -> DashboardDetailsResponse:
+        return build_dashboard_details_response(
+            db=self.db,
+            range_start=range_start,
+            range_end=range_end,
+            window_buckets=window_buckets,
+            browser_buckets=browser_buckets,
+            stopwatch_buckets=stopwatch_buckets,
+        )
 
     # TODO: Right now the log format on disk has to be JSON, this is hard to read by humans...
     def get_log(self):

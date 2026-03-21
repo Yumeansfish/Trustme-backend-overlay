@@ -56,6 +56,35 @@ class SummarySnapshotResponse(TypedDict):
     uncategorized_rows: List[UncategorizedRow]
 
 
+class BrowserSummaryResponse(TypedDict):
+    domains: List[AggregatedEvent]
+    urls: List[AggregatedEvent]
+    titles: List[AggregatedEvent]
+    duration: float
+
+
+class StopwatchSummaryResponse(TypedDict):
+    stopwatch_events: List[AggregatedEvent]
+
+
+class DashboardDetailsResponse(TypedDict):
+    browser: BrowserSummaryResponse
+    stopwatch: StopwatchSummaryResponse
+
+
+class DashboardScopeResponse(TypedDict):
+    requested_hosts: List[str]
+    resolved_hosts: List[str]
+    window_buckets: List[str]
+    afk_buckets: List[str]
+    browser_buckets: List[str]
+    stopwatch_buckets: List[str]
+
+
+class DashboardDefaultHostsResponse(TypedDict):
+    resolved_hosts: List[str]
+
+
 class CheckinAnswer(TypedDict):
     question_id: str
     emoji: str
@@ -217,6 +246,62 @@ def serialize_summary_snapshot_response(
         "uncategorized_rows": [
             serialize_uncategorized_row(row) for row in _as_list(payload.get("uncategorized_rows"))
         ],
+    }
+
+
+def serialize_browser_summary_response(payload: Any) -> BrowserSummaryResponse:
+    if not isinstance(payload, Mapping):
+        payload = {}
+
+    return {
+        "domains": [serialize_aggregated_event(event) for event in _as_list(payload.get("domains"))],
+        "urls": [serialize_aggregated_event(event) for event in _as_list(payload.get("urls"))],
+        "titles": [serialize_aggregated_event(event) for event in _as_list(payload.get("titles"))],
+        "duration": _as_float(payload.get("duration")),
+    }
+
+
+def serialize_stopwatch_summary_response(payload: Any) -> StopwatchSummaryResponse:
+    if not isinstance(payload, Mapping):
+        payload = {}
+
+    return {
+        "stopwatch_events": [
+            serialize_aggregated_event(event) for event in _as_list(payload.get("stopwatch_events"))
+        ]
+    }
+
+
+def serialize_dashboard_details_response(payload: Any) -> DashboardDetailsResponse:
+    if not isinstance(payload, Mapping):
+        payload = {}
+
+    return {
+        "browser": serialize_browser_summary_response(payload.get("browser")),
+        "stopwatch": serialize_stopwatch_summary_response(payload.get("stopwatch")),
+    }
+
+
+def serialize_dashboard_scope_response(payload: Any) -> DashboardScopeResponse:
+    if not isinstance(payload, Mapping):
+        payload = {}
+
+    return {
+        "requested_hosts": _as_string_list(payload.get("requested_hosts")),
+        "resolved_hosts": _as_string_list(payload.get("resolved_hosts")),
+        "window_buckets": _as_string_list(payload.get("window_buckets")),
+        "afk_buckets": _as_string_list(payload.get("afk_buckets")),
+        "browser_buckets": _as_string_list(payload.get("browser_buckets")),
+        "stopwatch_buckets": _as_string_list(payload.get("stopwatch_buckets")),
+    }
+
+
+def serialize_dashboard_default_hosts_response(payload: Any) -> DashboardDefaultHostsResponse:
+    if not isinstance(payload, Mapping):
+        payload = {}
+
+    return {
+        "resolved_hosts": _as_string_list(payload.get("resolved_hosts")),
     }
 
 

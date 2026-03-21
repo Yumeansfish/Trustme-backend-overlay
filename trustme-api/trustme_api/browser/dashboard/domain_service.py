@@ -21,6 +21,16 @@ class DashboardSummaryScope:
     always_active_pattern: str
 
 
+@dataclass(frozen=True)
+class DashboardResolvedScope:
+    requested_hosts: List[str]
+    resolved_hosts: List[str]
+    window_buckets: List[str]
+    afk_buckets: List[str]
+    browser_buckets: List[str]
+    stopwatch_buckets: List[str]
+
+
 def build_bucket_records(raw_buckets: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
     records = []
     for bucket_id, bucket in raw_buckets.items():
@@ -51,6 +61,30 @@ def build_ad_hoc_summary_scope(
         filter_categories=_normalize_filter_categories(filter_categories),
         filter_afk=bool(filter_afk),
         always_active_pattern=always_active_pattern or "",
+    )
+
+
+def build_settings_backed_summary_scope(
+    *,
+    settings_data: Dict[str, Any],
+    window_buckets: Sequence[str],
+    afk_buckets: Sequence[str],
+    stopwatch_buckets: Sequence[str],
+    filter_afk: bool,
+    filter_categories: Sequence[Sequence[str]],
+    group_name: str = "dashboard",
+) -> DashboardSummaryScope:
+    settings_data, _ = normalize_settings_data(settings_data)
+    return DashboardSummaryScope(
+        group_name=group_name,
+        hosts=[],
+        window_buckets=_dedupe_strings(window_buckets),
+        afk_buckets=_dedupe_strings(afk_buckets),
+        stopwatch_buckets=_dedupe_strings(stopwatch_buckets),
+        categories=_settings_to_query_categories(settings_data["classes"]),
+        filter_categories=_normalize_filter_categories(filter_categories),
+        filter_afk=bool(filter_afk),
+        always_active_pattern=str(settings_data["always_active_pattern"]),
     )
 
 
@@ -116,6 +150,86 @@ def build_dashboard_summary_scopes(
     return scopes
 
 
+def resolve_dashboard_scope(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+    requested_hosts: Sequence[str],
+    overlap_start_ms: Optional[float] = None,
+    overlap_end_ms: Optional[float] = None,
+) -> DashboardResolvedScope:
+    settings_data, _ = normalize_settings_data(settings_data)
+    known_hosts = _extract_known_hosts(bucket_records)
+    normalized_requested_hosts = _normalize_hosts(requested_hosts, known_hosts)
+    effective_mappings = _get_effective_device_mappings(
+        settings_data["deviceMappings"],
+        known_hosts,
+    )
+    expanded_hosts = _expand_requested_hosts_to_effective_groups(
+        normalized_requested_hosts,
+        effective_mappings,
+    )
+    resolved_hosts = list(expanded_hosts)
+
+    if (
+        resolved_hosts
+        and overlap_start_ms is not None
+        and overlap_end_ms is not None
+    ):
+        overlapping_hosts = [
+            host
+            for host in resolved_hosts
+            if _host_has_bucket_overlap(
+                bucket_records,
+                host,
+                overlap_start_ms,
+                overlap_end_ms,
+            )
+        ]
+        if overlapping_hosts:
+            resolved_hosts = overlapping_hosts
+
+    return DashboardResolvedScope(
+        requested_hosts=normalized_requested_hosts,
+        resolved_hosts=resolved_hosts,
+        window_buckets=_select_window_buckets(bucket_records, resolved_hosts),
+        afk_buckets=_select_buckets_by_type(bucket_records, resolved_hosts, "afkstatus"),
+        browser_buckets=_select_browser_buckets(bucket_records, resolved_hosts),
+        stopwatch_buckets=_select_stopwatch_buckets(bucket_records, resolved_hosts),
+    )
+
+
+def resolve_default_dashboard_hosts(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+) -> List[str]:
+    settings_data, _ = normalize_settings_data(settings_data)
+    known_hosts = _extract_known_hosts(bucket_records)
+    if not known_hosts:
+        return []
+
+    effective_mappings = _get_effective_device_mappings(
+        settings_data["deviceMappings"],
+        known_hosts,
+    )
+
+    for group_hosts in effective_mappings.values():
+        valid_hosts = [
+            host
+            for host in group_hosts
+            if _host_supports_activity(bucket_records, host)
+        ]
+        if valid_hosts:
+            return valid_hosts
+
+    fallback_host = next((host for host in known_hosts if _host_supports_activity(bucket_records, host)), None)
+    if fallback_host:
+        return [fallback_host]
+
+    return known_hosts[:1]
+
+
 def _dedupe_strings(values: Sequence[str]) -> List[str]:
     seen = set()
     results: List[str] = []
@@ -168,6 +282,32 @@ def _normalize_hosts(hosts: Iterable[str], known_hosts: Sequence[str]) -> List[s
         normalized.append(host)
 
     return normalized
+
+
+def _expand_requested_hosts_to_effective_groups(
+    requested_hosts: Sequence[str],
+    effective_mappings: Dict[str, List[str]],
+) -> List[str]:
+    expanded_hosts: List[str] = []
+    seen = set()
+
+    for requested_host in requested_hosts:
+        matching_group_hosts = next(
+            (
+                group_hosts
+                for group_hosts in effective_mappings.values()
+                if requested_host in group_hosts
+            ),
+            None,
+        )
+        hosts_to_add = matching_group_hosts or [requested_host]
+        for host in hosts_to_add:
+            if host in seen:
+                continue
+            seen.add(host)
+            expanded_hosts.append(host)
+
+    return expanded_hosts
 
 
 def _get_effective_device_mappings(
@@ -310,6 +450,27 @@ def _select_window_buckets(
     ]
 
 
+def _select_android_buckets(
+    bucket_records: Sequence[Dict[str, Any]],
+    hosts: Sequence[str],
+) -> List[str]:
+    return [
+        bucket_id
+        for bucket_id in _select_buckets_by_type(bucket_records, hosts, "currentwindow")
+        if bucket_id.startswith("aw-watcher-android")
+    ]
+
+
+def _host_supports_activity(bucket_records: Sequence[Dict[str, Any]], host: str) -> bool:
+    return bool(
+        (
+            _select_window_buckets(bucket_records, [host])
+            and _select_buckets_by_type(bucket_records, [host], "afkstatus")
+        )
+        or _select_android_buckets(bucket_records, [host])
+    )
+
+
 def _select_stopwatch_buckets(
     bucket_records: Sequence[Dict[str, Any]],
     hosts: Sequence[str],
@@ -320,6 +481,26 @@ def _select_stopwatch_buckets(
 
     for host in hosts:
         preferred = _select_buckets_by_type(bucket_records, [host], "general.stopwatch")
+        selected = preferred or unknown_fallback
+        for bucket_id in selected:
+            if bucket_id in seen:
+                continue
+            seen.add(bucket_id)
+            bucket_ids.append(bucket_id)
+
+    return bucket_ids
+
+
+def _select_browser_buckets(
+    bucket_records: Sequence[Dict[str, Any]],
+    hosts: Sequence[str],
+) -> List[str]:
+    bucket_ids: List[str] = []
+    seen = set()
+    unknown_fallback = _select_buckets_by_type(bucket_records, ["unknown"], "web.tab.current")
+
+    for host in hosts:
+        preferred = _select_buckets_by_type(bucket_records, [host], "web.tab.current")
         selected = preferred or unknown_fallback
         for bucket_id in selected:
             if bucket_id in seen:
