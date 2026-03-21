@@ -2,7 +2,7 @@
 set -euo pipefail
 
 FRONTEND_DIR="${1:-${FRONTEND_DIR:-../frontend}}"
-STATIC_DIR="${2:-aw-server/aw_server/static}"
+ARTIFACT_DIR="${2:-${AW_WEBUI_DIR:-build/frontend-artifact}}"
 
 if [[ ! -d "$FRONTEND_DIR" ]]; then
   echo "Frontend directory not found: $FRONTEND_DIR" >&2
@@ -18,5 +18,5 @@ echo "Building frontend from $FRONTEND_DIR"
 npm --prefix "$FRONTEND_DIR" ci
 npm --prefix "$FRONTEND_DIR" run build
 
-mkdir -p "$STATIC_DIR"
-rsync -a --delete "$FRONTEND_DIR/dist/" "$STATIC_DIR/"
+mkdir -p "$ARTIFACT_DIR"
+rsync -a --delete "$FRONTEND_DIR/dist/" "$ARTIFACT_DIR/"

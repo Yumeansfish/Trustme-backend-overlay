@@ -19,6 +19,7 @@ from flask_restx import Api, Resource, fields
 
 from . import logger
 from .api import ServerAPI
+from .dashboard_rest import dashboard_api
 from .exceptions import BadRequest, Unauthorized
 
 
@@ -55,6 +56,7 @@ api = Api(
     title="trust-me API",
     description="Local API browser for trust-me.",
 )
+api.add_namespace(dashboard_api)
 
 
 # Loads event and bucket schema from JSONSchema in aw_core
@@ -103,34 +105,6 @@ query = api.model(
         "query": fields.List(
             fields.String, required=True, description="String list of query statements"
         ),
-    },
-)
-
-
-summary_snapshot_query = api.model(
-    "SummarySnapshotQuery",
-    {
-        "range": fields.Raw(required=True, description="ISO start/end execution range"),
-        "category_periods": fields.List(
-            fields.String, required=True, description="Logical periods for by_period aggregation"
-        ),
-        "window_buckets": fields.List(fields.String, required=True),
-        "afk_buckets": fields.List(fields.String, required=True),
-        "stopwatch_buckets": fields.List(fields.String, required=False),
-        "filter_afk": fields.Boolean(required=False),
-        "categories": fields.Raw(required=False),
-        "filter_categories": fields.Raw(required=False),
-        "always_active_pattern": fields.String(required=False),
-    },
-)
-
-dashboard_details_query = api.model(
-    "DashboardDetailsQuery",
-    {
-        "range": fields.Raw(required=True, description="ISO start/end execution range"),
-        "window_buckets": fields.List(fields.String, required=True),
-        "browser_buckets": fields.List(fields.String, required=False),
-        "stopwatch_buckets": fields.List(fields.String, required=False),
     },
 )
 
@@ -358,109 +332,6 @@ class QueryResource(Resource):
         except QueryException as qe:
             traceback.print_exc()
             return {"type": type(qe).__name__, "message": str(qe)}, 400
-
-
-@api.route("/0/dashboard/summary-snapshot")
-class SummarySnapshotResource(Resource):
-    @api.expect(summary_snapshot_query, validate=False)
-    def post(self):
-        data = request.get_json() or {}
-        range_payload = data.get("range") or {}
-        try:
-            range_start = iso8601.parse_date(range_payload["start"])
-            range_end = iso8601.parse_date(range_payload["end"])
-        except Exception:
-            raise BadRequest(
-                "InvalidSummarySnapshotRange",
-                "Missing or invalid summary snapshot range payload",
-            )
-
-        result = current_app.api.summary_snapshot(
-            range_start=range_start,
-            range_end=range_end,
-            category_periods=data.get("category_periods") or [],
-            window_buckets=data.get("window_buckets") or [],
-            afk_buckets=data.get("afk_buckets") or [],
-            stopwatch_buckets=data.get("stopwatch_buckets") or [],
-            filter_afk=bool(data.get("filter_afk", True)),
-            filter_categories=data.get("filter_categories") or [],
-            categories=data.get("categories"),
-            always_active_pattern=data.get("always_active_pattern"),
-        )
-        return jsonify(result)
-
-
-@api.route("/0/dashboard/resolve-scope")
-class DashboardScopeResource(Resource):
-    def post(self):
-        data = request.get_json() or {}
-        range_payload = data.get("range")
-        range_start = None
-        range_end = None
-
-        if range_payload:
-            try:
-                range_start = iso8601.parse_date(range_payload["start"])
-                range_end = iso8601.parse_date(range_payload["end"])
-            except Exception:
-                raise BadRequest(
-                    "InvalidDashboardScopeRange",
-                    "Missing or invalid dashboard scope range payload",
-                )
-
-        requested_hosts = data.get("hosts") or []
-        if not isinstance(requested_hosts, list):
-            raise BadRequest(
-                "InvalidDashboardScopeHosts",
-                "Dashboard scope hosts payload must be a list",
-            )
-
-        result = current_app.api.resolve_dashboard_scope(
-            requested_hosts=requested_hosts,
-            range_start=range_start,
-            range_end=range_end,
-        )
-        return jsonify(result)
-
-
-@api.route("/0/dashboard/default-hosts")
-class DashboardDefaultHostsResource(Resource):
-    def get(self):
-        return jsonify(current_app.api.default_dashboard_hosts())
-
-
-@api.route("/0/dashboard/details")
-class DashboardDetailsResource(Resource):
-    @api.expect(dashboard_details_query)
-    def post(self):
-        data = request.get_json() or {}
-        range_payload = data.get("range")
-
-        try:
-            range_start = iso8601.parse_date(range_payload["start"])
-            range_end = iso8601.parse_date(range_payload["end"])
-        except Exception:
-            raise BadRequest(
-                "InvalidDashboardDetailsRange",
-                "Missing or invalid dashboard details range payload",
-            )
-
-        result = current_app.api.dashboard_details(
-            range_start=range_start,
-            range_end=range_end,
-            window_buckets=data.get("window_buckets") or [],
-            browser_buckets=data.get("browser_buckets") or [],
-            stopwatch_buckets=data.get("stopwatch_buckets") or [],
-        )
-        return jsonify(result)
-
-
-@api.route("/0/dashboard/checkins")
-class CheckinsResource(Resource):
-    def get(self):
-        date_filter = request.args.get("date", None)
-        result = current_app.api.get_checkins(date_filter=date_filter)
-        return jsonify(result)
 
 
 # EXPORT AND IMPORT

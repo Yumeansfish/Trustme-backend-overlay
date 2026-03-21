@@ -103,7 +103,7 @@ def _config_cors(cors_origins: List[str], testing: bool):
         )
 
     if testing:
-        # Used for development of aw-webui
+        # Used for development against a custom frontend artifact
         cors_origins.append("http://127.0.0.1:27180/*")
 
     # TODO: This could probably be more specific

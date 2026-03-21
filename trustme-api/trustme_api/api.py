@@ -21,13 +21,7 @@ from aw_query import query2
 from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
-from .checkins import build_checkins_payload
-from .dashboard_api_service import (
-    build_dashboard_details_response,
-    build_dashboard_scope_response,
-    build_default_dashboard_hosts_response,
-    build_summary_snapshot_response,
-)
+from .dashboard_api_facade import DashboardAPI
 from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
 from .dashboard_dto import (
     DashboardDetailsResponse,
@@ -35,7 +29,6 @@ from .dashboard_dto import (
     DashboardScopeResponse,
     CheckinsResponse,
     SummarySnapshotResponse,
-    serialize_checkins_response,
 )
 from .dashboard_summary_store import SummarySnapshotStore
 from .dashboard_summary_warmup import build_bucket_records
@@ -84,6 +77,12 @@ class ServerAPI:
         self.testing = testing
         self.last_event = {}  # type: dict
         self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
+        self.dashboard = DashboardAPI(
+            db=db,
+            settings=self.settings,
+            summary_snapshot_store=self.summary_snapshot_store,
+            get_buckets=self.get_buckets,
+        )
 
     def get_info(self) -> Dict[str, Any]:
         """Get server info"""
@@ -399,10 +398,7 @@ class ServerAPI:
         categories: Optional[List[Any]] = None,
         always_active_pattern: Optional[str] = None,
     ) -> SummarySnapshotResponse:
-        return build_summary_snapshot_response(
-            db=self.db,
-            settings_data=self.settings.get(""),
-            summary_snapshot_store=self.summary_snapshot_store,
+        return self.dashboard.summary_snapshot(
             range_start=range_start,
             range_end=range_end,
             category_periods=category_periods,
@@ -416,7 +412,7 @@ class ServerAPI:
         )
 
     def get_checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
-        return serialize_checkins_response(build_checkins_payload(date_filter=date_filter))
+        return self.dashboard.checkins(date_filter=date_filter)
 
     def resolve_dashboard_scope(
         self,
@@ -425,19 +421,14 @@ class ServerAPI:
         range_start: Optional[datetime] = None,
         range_end: Optional[datetime] = None,
     ) -> DashboardScopeResponse:
-        return build_dashboard_scope_response(
-            settings_data=self.settings.get(""),
-            bucket_records=build_bucket_records(self.get_buckets()),
+        return self.dashboard.resolve_scope(
             requested_hosts=requested_hosts,
             range_start=range_start,
             range_end=range_end,
         )
 
     def default_dashboard_hosts(self) -> DashboardDefaultHostsResponse:
-        return build_default_dashboard_hosts_response(
-            settings_data=self.settings.get(""),
-            bucket_records=build_bucket_records(self.get_buckets()),
-        )
+        return self.dashboard.default_hosts()
 
     def dashboard_details(
         self,
@@ -448,8 +439,7 @@ class ServerAPI:
         browser_buckets: List[str],
         stopwatch_buckets: List[str],
     ) -> DashboardDetailsResponse:
-        return build_dashboard_details_response(
-            db=self.db,
+        return self.dashboard.details(
             range_start=range_start,
             range_end=range_end,
             window_buckets=window_buckets,
