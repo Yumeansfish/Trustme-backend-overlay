@@ -15,6 +15,7 @@ SETTINGS_KEY_ALIASES = {
 }
 ALLOWED_START_OF_WEEK = {"Monday", "Sunday"}
 ALLOWED_THEME = {"light", "dark", "auto"}
+MATCHER_METADATA_KEYS = ("exact_apps", "aliases", "domains", "title_keywords")
 _MISSING = object()
 
 
@@ -92,27 +93,78 @@ def _build_knowledgebase_regex(category: Dict[str, Any]) -> str | None:
     return "|".join(patterns) if patterns else None
 
 
-def _load_default_classes() -> List[Dict[str, Any]]:
+def _extract_matcher_metadata(source: Dict[str, Any]) -> Dict[str, List[str]]:
+    metadata: Dict[str, List[str]] = {}
+    for key in MATCHER_METADATA_KEYS:
+        values = _normalize_terms(source.get(key))
+        if values:
+            metadata[key] = values
+    return metadata
+
+
+def _build_knowledgebase_rule(category: Dict[str, Any]) -> Dict[str, Any]:
+    regex = _build_knowledgebase_regex(category)
+    if not regex:
+        return {"type": "none"}
+
+    rule: Dict[str, Any] = {
+        "type": "regex",
+        "regex": regex,
+        "ignore_case": True,
+    }
+    rule.update(_extract_matcher_metadata(category))
+    return rule
+
+
+def _load_seed_knowledgebase_categories() -> List[Dict[str, Any]]:
     seed_path = Path(__file__).with_name("settings_seed_knowledgebase.v1.json")
     document = json.loads(seed_path.read_text())
-    categories = sorted(
+    return sorted(
         document.get("categories") or [],
         key=lambda category: CATEGORY_PRIORITY.get(str(category.get("name") or ""), 0),
         reverse=True,
     )
 
+
+_DEFAULT_KNOWLEDGEBASE_CATEGORIES = _load_seed_knowledgebase_categories()
+_DEFAULT_KNOWLEDGEBASE_RULES_BY_NAME = {
+    str(category.get("name") or "").strip(): _build_knowledgebase_rule(category)
+    for category in _DEFAULT_KNOWLEDGEBASE_CATEGORIES
+    if str(category.get("name") or "").strip()
+}
+
+
+def _hydrate_knowledgebase_matcher_metadata(name: List[str], rule: Dict[str, Any]) -> Dict[str, Any]:
+    if rule.get("type") != "regex" or len(name) != 1:
+        return rule
+
+    default_rule = _DEFAULT_KNOWLEDGEBASE_RULES_BY_NAME.get(name[0])
+    if not default_rule or default_rule.get("type") != "regex":
+        return rule
+    if rule.get("regex") != default_rule.get("regex"):
+        return rule
+    if "ignore_case" in rule and bool(rule.get("ignore_case")) != bool(default_rule.get("ignore_case")):
+        return rule
+
+    hydrated = dict(rule)
+    if "ignore_case" not in hydrated and "ignore_case" in default_rule:
+        hydrated["ignore_case"] = bool(default_rule["ignore_case"])
+    for key in MATCHER_METADATA_KEYS:
+        if key not in hydrated and key in default_rule:
+            hydrated[key] = deepcopy(default_rule[key])
+    return hydrated
+
+
+def _load_default_classes() -> List[Dict[str, Any]]:
     compiled = []
-    for category in categories:
+    for category in _DEFAULT_KNOWLEDGEBASE_CATEGORIES:
         name = str(category.get("name") or "").strip()
         if not name:
             continue
 
-        regex = _build_knowledgebase_regex(category)
         entry: Dict[str, Any] = {
             "name": [name],
-            "rule": {"type": "regex", "regex": regex, "ignore_case": True}
-            if regex
-            else {"type": "none"},
+            "rule": _build_knowledgebase_rule(category),
         }
         compiled.append(entry)
 
@@ -262,6 +314,7 @@ def _normalize_category_rule(value: Any, *, strict: bool) -> Dict[str, Any]:
     normalized = {"type": "regex", "regex": regex.strip()}
     if value.get("ignore_case") is not None:
         normalized["ignore_case"] = bool(value.get("ignore_case"))
+    normalized.update(_extract_matcher_metadata(value))
     return normalized
 
 
@@ -354,9 +407,13 @@ def _normalize_class_entry(
             raise ValueError(f"Category at index {index} has an invalid name")
         return None
 
+    rule = _hydrate_knowledgebase_matcher_metadata(
+        name,
+        _normalize_category_rule(value.get("rule"), strict=strict),
+    )
     entry: Dict[str, Any] = {
         "name": name,
-        "rule": _normalize_category_rule(value.get("rule"), strict=strict),
+        "rule": rule,
     }
     data = _normalize_category_data(value.get("data"))
     if data:

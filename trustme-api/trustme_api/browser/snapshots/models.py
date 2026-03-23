@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from aw_core.models import Event
 
@@ -27,6 +27,25 @@ class CompiledCategoryRule:
     category: List[str]
     regex: Any
     depth: int
+
+
+@dataclass(frozen=True)
+class CompiledCategoryTermRule:
+    category: List[str]
+    terms: Tuple[str, ...]
+    depth: int
+    ignore_case: bool = False
+
+
+@dataclass(frozen=True)
+class CompiledCategoryMatcher:
+    exact_apps_case_sensitive: Dict[str, List[str]] = field(default_factory=dict)
+    exact_apps_casefolded: Dict[str, List[str]] = field(default_factory=dict)
+    domains_case_sensitive: Dict[str, Tuple[int, List[str]]] = field(default_factory=dict)
+    domains_casefolded: Dict[str, Tuple[int, List[str]]] = field(default_factory=dict)
+    alias_rules: Tuple[CompiledCategoryTermRule, ...] = ()
+    title_rules: Tuple[CompiledCategoryTermRule, ...] = ()
+    regex_rules: Tuple[CompiledCategoryRule, ...] = ()
 
 @dataclass(frozen=True)
 class SummarySegment:

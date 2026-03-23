@@ -19,7 +19,7 @@ from .summary_snapshot_scope import (
     expand_range_to_cover_periods,
 )
 from .summary_snapshot_segments import build_summary_segment, empty_summary_segment
-from .summary_snapshot_models import SummarySegment, datetime_to_ms
+from .summary_snapshot_models import CompiledCategoryMatcher, SummarySegment, datetime_to_ms
 
 
 def build_summary_snapshot(
@@ -103,8 +103,8 @@ def build_summary_snapshot_from_scope(
     segments: Dict[str, SummarySegment] = {}
     range_end_ms = datetime_to_ms(range_end)
     stored_at = datetime.now(timezone.utc).isoformat()
-    compiled_rules = None
-    category_cache: Dict[Tuple[str, str], List[str]] = {}
+    compiled_rules: Optional[CompiledCategoryMatcher] = None
+    category_cache: Dict[Tuple[str, str, str], List[str]] = {}
 
     for period in period_bounds:
         effective_end_ms = min(period.end_ms, range_end_ms)

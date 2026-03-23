@@ -7,7 +7,7 @@ from aw_core.models import Event
 
 from .summary_snapshot_categories import resolve_category_for_data
 from .summary_snapshot_models import (
-    CompiledCategoryRule,
+    CompiledCategoryMatcher,
     NumericInterval,
     PeriodBound,
     SummarySegment,
@@ -38,10 +38,10 @@ def build_summary_segment(
     afk_buckets: Sequence[str],
     stopwatch_buckets: Sequence[str],
     filter_afk: bool,
-    compiled_rules: Sequence[CompiledCategoryRule],
+    compiled_rules: CompiledCategoryMatcher,
     allowed_categories: Optional[set],
     always_active_pattern: str,
-    category_cache: Dict[tuple[str, str], List[str]],
+    category_cache: Dict[tuple[str, str, str], List[str]],
 ) -> SummarySegment:
     if segment_end <= segment_start:
         return empty_summary_segment(logical_period, datetime_to_ms(segment_end))
@@ -277,12 +277,12 @@ def accumulate_slice(
     start_ms: float,
     end_ms: float,
     data: Dict[str, Any],
-    compiled_rules: Sequence[CompiledCategoryRule],
+    compiled_rules: CompiledCategoryMatcher,
     allowed_categories: Optional[set],
     app_durations: Dict[str, Dict[str, float]],
     category_durations: Dict[str, Dict[str, Any]],
     uncategorized_apps: Dict[str, Dict[str, float]],
-    category_cache: Dict[tuple[str, str], List[str]],
+    category_cache: Dict[tuple[str, str, str], List[str]],
     period_bounds: Sequence[PeriodBound],
     by_period_maps: Sequence[Dict[str, Dict[str, Any]]],
 ) -> float:
