@@ -103,16 +103,15 @@ def _extract_matcher_metadata(source: Dict[str, Any]) -> Dict[str, List[str]]:
 
 
 def _build_knowledgebase_rule(category: Dict[str, Any]) -> Dict[str, Any]:
-    regex = _build_knowledgebase_regex(category)
-    if not regex:
+    metadata = _extract_matcher_metadata(category)
+    if not metadata:
         return {"type": "none"}
 
     rule: Dict[str, Any] = {
         "type": "regex",
-        "regex": regex,
         "ignore_case": True,
     }
-    rule.update(_extract_matcher_metadata(category))
+    rule.update(metadata)
     return rule
 
 
@@ -132,6 +131,11 @@ _DEFAULT_KNOWLEDGEBASE_RULES_BY_NAME = {
     for category in _DEFAULT_KNOWLEDGEBASE_CATEGORIES
     if str(category.get("name") or "").strip()
 }
+_DEFAULT_KNOWLEDGEBASE_LEGACY_REGEX_BY_NAME = {
+    str(category.get("name") or "").strip(): _build_knowledgebase_regex(category)
+    for category in _DEFAULT_KNOWLEDGEBASE_CATEGORIES
+    if str(category.get("name") or "").strip() and _build_knowledgebase_regex(category)
+}
 
 
 def _hydrate_knowledgebase_matcher_metadata(name: List[str], rule: Dict[str, Any]) -> Dict[str, Any]:
@@ -141,17 +145,22 @@ def _hydrate_knowledgebase_matcher_metadata(name: List[str], rule: Dict[str, Any
     default_rule = _DEFAULT_KNOWLEDGEBASE_RULES_BY_NAME.get(name[0])
     if not default_rule or default_rule.get("type") != "regex":
         return rule
-    if rule.get("regex") != default_rule.get("regex"):
-        return rule
-    if "ignore_case" in rule and bool(rule.get("ignore_case")) != bool(default_rule.get("ignore_case")):
-        return rule
 
     hydrated = dict(rule)
+    has_matcher_metadata = any(key in hydrated for key in MATCHER_METADATA_KEYS)
+    legacy_regex = _DEFAULT_KNOWLEDGEBASE_LEGACY_REGEX_BY_NAME.get(name[0])
+    rule_regex = hydrated.get("regex") if isinstance(hydrated.get("regex"), str) else None
+
     if "ignore_case" not in hydrated and "ignore_case" in default_rule:
         hydrated["ignore_case"] = bool(default_rule["ignore_case"])
-    for key in MATCHER_METADATA_KEYS:
-        if key not in hydrated and key in default_rule:
-            hydrated[key] = deepcopy(default_rule[key])
+
+    if not has_matcher_metadata and (rule_regex is None or rule_regex == legacy_regex):
+        for key in MATCHER_METADATA_KEYS:
+            if key in default_rule:
+                hydrated[key] = deepcopy(default_rule[key])
+        if rule_regex == legacy_regex:
+            hydrated.pop("regex", None)
+
     return hydrated
 
 
@@ -305,16 +314,22 @@ def _normalize_category_rule(value: Any, *, strict: bool) -> Dict[str, Any]:
             raise ValueError("Category rule type must be regex, none, or null")
         return {"type": "none"}
 
+    metadata = _extract_matcher_metadata(value)
     regex = value.get("regex")
-    if not isinstance(regex, str) or not regex.strip():
+    normalized_regex = regex.strip() if isinstance(regex, str) and regex.strip() else None
+    if normalized_regex is None and not metadata:
         if strict:
-            raise ValueError("Regex category rules require a non-empty regex")
+            raise ValueError("Regex category rules require a matcher or a non-empty regex")
         return {"type": "none"}
 
-    normalized = {"type": "regex", "regex": regex.strip()}
+    normalized: Dict[str, Any] = {"type": "regex"}
+    if normalized_regex is not None:
+        normalized["regex"] = normalized_regex
     if value.get("ignore_case") is not None:
         normalized["ignore_case"] = bool(value.get("ignore_case"))
-    normalized.update(_extract_matcher_metadata(value))
+    elif metadata:
+        normalized["ignore_case"] = True
+    normalized.update(metadata)
     return normalized
 
 
