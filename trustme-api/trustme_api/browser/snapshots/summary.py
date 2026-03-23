@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .dashboard_domain_service import DashboardSummaryScope, build_ad_hoc_summary_scope
 from .dashboard_dto import SummarySnapshotResponse
@@ -104,6 +104,7 @@ def build_summary_snapshot_from_scope(
     range_end_ms = datetime_to_ms(range_end)
     stored_at = datetime.now(timezone.utc).isoformat()
     compiled_rules = None
+    category_cache: Dict[Tuple[str, str], List[str]] = {}
 
     for period in period_bounds:
         effective_end_ms = min(period.end_ms, range_end_ms)
@@ -138,6 +139,7 @@ def build_summary_snapshot_from_scope(
             compiled_rules=compiled_rules,
             allowed_categories=allowed_categories,
             always_active_pattern=scope.always_active_pattern,
+            category_cache=category_cache,
         )
         merged_segment = merge_summary_segments(working_segment, delta_segment)
         segments[period.key] = merged_segment

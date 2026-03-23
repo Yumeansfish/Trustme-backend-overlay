@@ -26,7 +26,7 @@ class PeriodBound:
 class CompiledCategoryRule:
     category: List[str]
     regex: Any
-
+    depth: int
 
 @dataclass(frozen=True)
 class SummarySegment:

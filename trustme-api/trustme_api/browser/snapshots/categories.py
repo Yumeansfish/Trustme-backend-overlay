@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .summary_snapshot_models import CompiledCategoryRule, UNCATEGORIZED_CATEGORY_NAME
 
@@ -24,11 +24,12 @@ def compile_category_rules(rules: Sequence[Any]) -> List[CompiledCategoryRule]:
                 CompiledCategoryRule(
                     category=normalize_category_name(category_name),
                     regex=re.compile(str(definition["regex"]), flags),
+                    depth=len(normalize_category_name(category_name)),
                 )
             )
         except re.error:
             continue
-    return compiled_rules
+    return sorted(compiled_rules, key=lambda rule: rule.depth, reverse=True)
 
 
 def normalize_category_name(category: Any) -> List[str]:
@@ -40,7 +41,9 @@ def normalize_category_name(category: Any) -> List[str]:
 
 
 def resolve_category_for_data(
-    data: Dict[str, Any], compiled_rules: Sequence[CompiledCategoryRule]
+    data: Dict[str, Any],
+    compiled_rules: Sequence[CompiledCategoryRule],
+    category_cache: Optional[Dict[Tuple[str, str], List[str]]] = None,
 ) -> List[str]:
     manual_category = manual_away_category_from_data(data)
     if manual_category is not None:
@@ -48,15 +51,23 @@ def resolve_category_for_data(
 
     app = data.get("app") if isinstance(data.get("app"), str) else ""
     title = data.get("title") if isinstance(data.get("title"), str) else ""
+    cache_key = (app, title)
+    if category_cache is not None:
+        cached = category_cache.get(cache_key)
+        if cached is not None:
+            return list(cached)
 
-    matches = [
-        rule.category
-        for rule in compiled_rules
-        if rule.regex.search(app) or rule.regex.search(title)
-    ]
-    if not matches:
-        return list(UNCATEGORIZED_CATEGORY_NAME)
-    return max(matches, key=len)
+    for rule in compiled_rules:
+        if rule.regex.search(app) or rule.regex.search(title):
+            resolved = list(rule.category)
+            if category_cache is not None:
+                category_cache[cache_key] = resolved
+            return resolved
+
+    uncategorized = list(UNCATEGORIZED_CATEGORY_NAME)
+    if category_cache is not None:
+        category_cache[cache_key] = uncategorized
+    return uncategorized
 
 
 def manual_away_category_from_data(data: Dict[str, Any]) -> Optional[List[str]]:

@@ -41,6 +41,7 @@ def build_summary_segment(
     compiled_rules: Sequence[CompiledCategoryRule],
     allowed_categories: Optional[set],
     always_active_pattern: str,
+    category_cache: Dict[tuple[str, str], List[str]],
 ) -> SummarySegment:
     if segment_end <= segment_start:
         return empty_summary_segment(logical_period, datetime_to_ms(segment_end))
@@ -104,6 +105,7 @@ def build_summary_segment(
                 app_durations,
                 category_durations,
                 uncategorized_apps,
+                category_cache,
                 [],
                 [],
             )
@@ -124,6 +126,7 @@ def build_summary_segment(
             app_durations,
             category_durations,
             uncategorized_apps,
+            category_cache,
             [],
             [],
         )
@@ -279,6 +282,7 @@ def accumulate_slice(
     app_durations: Dict[str, Dict[str, float]],
     category_durations: Dict[str, Dict[str, Any]],
     uncategorized_apps: Dict[str, Dict[str, float]],
+    category_cache: Dict[tuple[str, str], List[str]],
     period_bounds: Sequence[PeriodBound],
     by_period_maps: Sequence[Dict[str, Dict[str, Any]]],
 ) -> float:
@@ -286,7 +290,7 @@ def accumulate_slice(
         return 0.0
 
     duration = (end_ms - start_ms) / 1000
-    category = resolve_category_for_data(data, compiled_rules)
+    category = resolve_category_for_data(data, compiled_rules, category_cache)
     category_key = json.dumps(category)
     app = data.get("app").strip() if isinstance(data.get("app"), str) else ""
 
