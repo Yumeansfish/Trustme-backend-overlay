@@ -537,9 +537,11 @@ class ServerAPI:
             normalized_key in SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS
             and previous_value != normalized_value
         ):
+            current_settings = deepcopy(self.settings.get("", {}))
             deleted = invalidate_summary_snapshots_for_settings(
                 store=self.summary_snapshot_store,
-                settings_data=previous_settings,
+                previous_settings_data=previous_settings,
+                settings_data=current_settings,
                 bucket_records=build_bucket_records(self.get_buckets()),
             )
             logger.info(

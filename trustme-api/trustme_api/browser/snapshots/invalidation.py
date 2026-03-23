@@ -55,6 +55,46 @@ def build_snapshot_invalidation_targets(
     return build_snapshot_targets_from_jobs(jobs)
 
 
+def build_snapshot_invalidation_targets_for_settings_change(
+    *,
+    previous_settings_data: Dict[str, Any],
+    settings_data: Dict[str, Any],
+    bucket_records: List[Dict[str, Any]],
+    now: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
+    previous_targets = build_snapshot_invalidation_targets(
+        settings_data=previous_settings_data,
+        bucket_records=bucket_records,
+        now=now,
+    )
+    current_targets = build_snapshot_invalidation_targets(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+        now=now,
+    )
+    return diff_snapshot_targets(previous_targets, current_targets)
+
+
+def diff_snapshot_targets(
+    previous_targets: List[Dict[str, Any]],
+    current_targets: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    previous_map = _target_period_map(previous_targets)
+    current_map = _target_period_map(current_targets)
+
+    diff_targets = []
+    for scope_key in sorted(set(previous_map) | set(current_map)):
+        logical_periods = sorted(previous_map.get(scope_key, set()) ^ current_map.get(scope_key, set()))
+        if logical_periods:
+            diff_targets.append(
+                {
+                    "scope_key": scope_key,
+                    "logical_periods": logical_periods,
+                }
+            )
+    return diff_targets
+
+
 def invalidate_summary_snapshots_for_targets(
     *,
     store: SummarySnapshotStore,
@@ -72,11 +112,13 @@ def invalidate_summary_snapshots_for_targets(
 def invalidate_summary_snapshots_for_settings(
     *,
     store: SummarySnapshotStore,
+    previous_settings_data: Dict[str, Any],
     settings_data: Dict[str, Any],
     bucket_records: List[Dict[str, Any]],
     now: Optional[datetime] = None,
 ) -> int:
-    targets = build_snapshot_invalidation_targets(
+    targets = build_snapshot_invalidation_targets_for_settings_change(
+        previous_settings_data=previous_settings_data,
         settings_data=settings_data,
         bucket_records=bucket_records,
         now=now,
@@ -98,3 +140,12 @@ def _scope_key_for_scope(scope: DashboardSummaryScope) -> str:
         filter_categories=scope.filter_categories,
         always_active_pattern=scope.always_active_pattern,
     )
+
+
+def _target_period_map(targets: List[Dict[str, Any]]) -> Dict[str, set[str]]:
+    target_map: Dict[str, set[str]] = {}
+    for target in targets:
+        scope_key = str(target["scope_key"])
+        entry = target_map.setdefault(scope_key, set())
+        entry.update(str(period) for period in target.get("logical_periods", []))
+    return target_map
