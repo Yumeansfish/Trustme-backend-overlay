@@ -18,9 +18,9 @@ from aw_server.dashboard_domain_service import (  # noqa: E402
     build_bucket_records,
     build_dashboard_summary_scopes,
 )
+from aw_server.experimental_canonical_store import SqliteCanonicalUnitStore  # noqa: E402
 from aw_server.experimental_canonical_strategy import PERSISTED_UNIT_KINDS  # noqa: E402
 from aw_server.experimental_canonical_units import (  # noqa: E402
-    InMemoryCanonicalUnitStore,
     ExperimentalCanonicalQueryEngine,
     SCENARIO_NAMES,
     build_benchmark_queries,
@@ -72,6 +72,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional path to write the benchmark JSON payload",
     )
+    parser.add_argument(
+        "--store-path",
+        default="",
+        help="Optional path to the canonical unit SQLite store used by the benchmark",
+    )
     return parser.parse_args()
 
 
@@ -94,7 +99,10 @@ def main() -> None:
     if not scopes:
         raise ValueError("No dashboard scopes available for the requested benchmark filters")
 
-    shared_store = InMemoryCanonicalUnitStore()
+    shared_store = SqliteCanonicalUnitStore(
+        testing=args.testing,
+        path=Path(args.store_path) if args.store_path else None,
+    )
     engines = [
         ExperimentalCanonicalQueryEngine(
             db=server_api.db,
@@ -170,6 +178,7 @@ def main() -> None:
         "repeat": args.repeat,
         "groups": args.groups,
         "scope_names": [scope.group_name for scope in scopes],
+        "store_path": str(shared_store.path),
         "results": results,
     }
     encoded = json.dumps(payload, indent=2)
@@ -180,4 +189,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

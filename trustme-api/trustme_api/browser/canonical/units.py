@@ -2,7 +2,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, time as daytime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tuple
 
 from .dashboard_domain_service import DashboardSummaryScope
 from .dashboard_summary_warmup import _resolve_local_timezone
@@ -157,6 +157,33 @@ class InMemoryCanonicalUnitStore:
         return dict(sorted(counts.items()))
 
 
+class CanonicalUnitStoreProtocol(Protocol):
+    def get(
+        self,
+        *,
+        scope_key: str,
+        calendar_key: str,
+        unit_kind: str,
+        unit_start: datetime,
+        unit_end: datetime,
+    ) -> Optional[SummarySegment]: ...
+
+    def put(
+        self,
+        *,
+        scope_key: str,
+        calendar_key: str,
+        unit_kind: str,
+        unit_start: datetime,
+        unit_end: datetime,
+        segment: SummarySegment,
+    ) -> None: ...
+
+    def clear(self) -> None: ...
+
+    def count_by_kind(self) -> Dict[str, int]: ...
+
+
 def build_calendar_profile(
     settings_data: Dict[str, Any],
     *,
@@ -309,7 +336,7 @@ class ExperimentalCanonicalQueryEngine:
         db,
         scope: DashboardSummaryScope,
         settings_data: Dict[str, Any],
-        store: Optional[InMemoryCanonicalUnitStore] = None,
+        store: Optional[CanonicalUnitStoreProtocol] = None,
         persisted_unit_kinds: Sequence[str] = PERSISTED_UNIT_KINDS,
         local_timezone=None,
     ) -> None:
@@ -690,4 +717,3 @@ def _parse_start_of_day(value: str) -> Tuple[int, int]:
 def _offset_duration(start_of_day: str) -> timedelta:
     hours, minutes = _parse_start_of_day(start_of_day)
     return timedelta(hours=hours, minutes=minutes)
-
