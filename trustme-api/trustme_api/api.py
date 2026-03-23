@@ -22,7 +22,11 @@ from aw_transform import heartbeat_merge
 
 from .__about__ import __version__
 from .dashboard_api_facade import DashboardAPI
-from .dashboard_summary_invalidation import invalidate_summary_snapshots_for_settings
+from .dashboard_summary_invalidation import (
+    invalidate_canonical_units_for_bucket_time_range,
+    invalidate_canonical_units_for_settings,
+    invalidate_summary_snapshots_for_settings,
+)
 from .dashboard_dto import (
     DashboardDetailsResponse,
     DashboardDefaultHostsResponse,
@@ -101,6 +105,7 @@ class ServerAPI:
         bucket_id: str,
         *,
         write_start: datetime,
+        write_end: Optional[datetime] = None,
         latest_event: Optional[Event] = None,
     ) -> int:
         latest_event = latest_event or self._get_latest_bucket_event(bucket_id)
@@ -111,14 +116,25 @@ class ServerAPI:
         if write_start >= latest_end:
             return 0
 
-        deleted = self.summary_snapshot_store.delete_segments()
-        if deleted:
+        snapshot_deleted = self.summary_snapshot_store.delete_segments()
+        canonical_deleted = invalidate_canonical_units_for_bucket_time_range(
+            store=self.canonical_unit_store,
+            settings_data=self.settings.get(""),
+            bucket_records=build_bucket_records(self.get_buckets()),
+            bucket_id=bucket_id,
+            range_start=write_start,
+            range_end=write_end or write_start,
+        )
+        if snapshot_deleted or canonical_deleted:
             logger.info(
-                "Invalidated %s summary snapshot segments after retroactive write in bucket '%s'",
-                deleted,
+                "Invalidated snapshot caches after retroactive write in bucket '%s'",
                 bucket_id,
+                extra={
+                    "deleted_summary_segments": snapshot_deleted,
+                    "deleted_canonical_units": canonical_deleted,
+                },
             )
-        return deleted
+        return snapshot_deleted + canonical_deleted
 
     def _invalidate_summary_snapshots_for_event_deletion(
         self,
@@ -128,15 +144,26 @@ class ServerAPI:
         if event is None:
             return 0
 
-        deleted = self.summary_snapshot_store.delete_segments()
-        if deleted:
+        snapshot_deleted = self.summary_snapshot_store.delete_segments()
+        canonical_deleted = invalidate_canonical_units_for_bucket_time_range(
+            store=self.canonical_unit_store,
+            settings_data=self.settings.get(""),
+            bucket_records=build_bucket_records(self.get_buckets()),
+            bucket_id=bucket_id,
+            range_start=event.timestamp,
+            range_end=event.timestamp + event.duration,
+        )
+        if snapshot_deleted or canonical_deleted:
             logger.info(
-                "Invalidated %s summary snapshot segments after deleting event %s from bucket '%s'",
-                deleted,
+                "Invalidated snapshot caches after deleting event %s from bucket '%s'",
                 getattr(event, "id", None),
                 bucket_id,
+                extra={
+                    "deleted_summary_segments": snapshot_deleted,
+                    "deleted_canonical_units": canonical_deleted,
+                },
             )
-        return deleted
+        return snapshot_deleted + canonical_deleted
 
     def get_info(self) -> Dict[str, Any]:
         """Get server info"""
@@ -324,11 +351,13 @@ class ServerAPI:
         Returns the inserted event when a single event was inserted, otherwise None."""
         latest_event = self._get_latest_bucket_event(bucket_id)
         earliest_timestamp = min((event.timestamp for event in events), default=None)
+        latest_written_end = max((event.timestamp + event.duration for event in events), default=None)
         inserted = self.db[bucket_id].insert(events)
         if earliest_timestamp is not None:
             self._invalidate_summary_snapshots_for_retroactive_write(
                 bucket_id,
                 write_start=earliest_timestamp,
+                write_end=latest_written_end,
                 latest_event=latest_event,
             )
         return inserted
@@ -435,6 +464,7 @@ class ServerAPI:
         self._invalidate_summary_snapshots_for_retroactive_write(
             bucket_id,
             write_start=heartbeat.timestamp,
+            write_end=heartbeat.timestamp + heartbeat.duration,
             latest_event=last_event,
         )
         return heartbeat
@@ -547,9 +577,18 @@ class ServerAPI:
                 settings_data=current_settings,
                 bucket_records=build_bucket_records(self.get_buckets()),
             )
+            canonical_deleted = invalidate_canonical_units_for_settings(
+                store=self.canonical_unit_store,
+                previous_settings_data=previous_settings,
+                settings_data=current_settings,
+                bucket_records=build_bucket_records(self.get_buckets()),
+            )
             logger.info(
-                "Invalidated dashboard summary snapshots after settings change: %s",
+                "Invalidated dashboard summary caches after settings change: %s",
                 normalized_key,
-                extra={"deleted_segments": deleted},
+                extra={
+                    "deleted_summary_segments": deleted,
+                    "deleted_canonical_units": canonical_deleted,
+                },
             )
         return normalized_value

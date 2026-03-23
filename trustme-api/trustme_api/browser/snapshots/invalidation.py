@@ -1,13 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from .dashboard_domain_service import DashboardSummaryScope
+from .dashboard_domain_service import DashboardSummaryScope, build_dashboard_summary_scopes
 from .dashboard_summary_store import SummarySnapshotStore
+from .experimental_canonical_store import SqliteCanonicalUnitStore
+from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
+from .experimental_canonical_units import build_calendar_profile, parse_time_range
 from .dashboard_summary_warmup import (
     SummaryWarmupJob,
     build_dashboard_summary_warmup_jobs,
 )
-from .summary_snapshot import build_summary_snapshot_scope_key
+from .summary_snapshot_scope import build_summary_snapshot_scope_key
 
 
 def build_snapshot_targets_from_jobs(
@@ -126,6 +129,85 @@ def invalidate_summary_snapshots_for_settings(
     return invalidate_summary_snapshots_for_targets(store=store, targets=targets)
 
 
+def invalidate_canonical_units_for_bucket_time_range(
+    *,
+    store: SqliteCanonicalUnitStore,
+    settings_data: Dict[str, Any],
+    bucket_records: List[Dict[str, Any]],
+    bucket_id: str,
+    range_start: datetime,
+    range_end: datetime,
+) -> int:
+    effective_start, effective_end = _coerce_nonempty_range(range_start, range_end)
+    calendar_key = build_calendar_profile(settings_data).key
+    scopes = build_dashboard_summary_scopes(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+        overlap_start_ms=effective_start.timestamp() * 1000,
+        overlap_end_ms=effective_end.timestamp() * 1000,
+    )
+
+    deleted = 0
+    for scope in scopes:
+        if bucket_id not in {
+            *scope.window_buckets,
+            *scope.afk_buckets,
+            *scope.stopwatch_buckets,
+        }:
+            continue
+        deleted += store.delete_units(
+            scope_key=_scope_key_for_scope(scope),
+            calendar_key=calendar_key,
+            unit_kinds=PERSISTED_UNIT_KINDS,
+            range_start=effective_start,
+            range_end=effective_end,
+        )
+    return deleted
+
+
+def invalidate_canonical_units_for_settings(
+    *,
+    store: SqliteCanonicalUnitStore,
+    previous_settings_data: Dict[str, Any],
+    settings_data: Dict[str, Any],
+    bucket_records: List[Dict[str, Any]],
+    now: Optional[datetime] = None,
+) -> int:
+    previous_targets = build_snapshot_invalidation_targets(
+        settings_data=previous_settings_data,
+        bucket_records=bucket_records,
+        now=now,
+    )
+    current_targets = build_snapshot_invalidation_targets(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+        now=now,
+    )
+    previous_map = _target_period_map(previous_targets)
+    current_map = _target_period_map(current_targets)
+
+    deleted = 0
+    deleted += _invalidate_canonical_units_for_period_map(
+        store=store,
+        calendar_key=build_calendar_profile(previous_settings_data).key,
+        period_map={
+            scope_key: periods - current_map.get(scope_key, set())
+            for scope_key, periods in previous_map.items()
+            if periods - current_map.get(scope_key, set())
+        },
+    )
+    deleted += _invalidate_canonical_units_for_period_map(
+        store=store,
+        calendar_key=build_calendar_profile(settings_data).key,
+        period_map={
+            scope_key: periods - previous_map.get(scope_key, set())
+            for scope_key, periods in current_map.items()
+            if periods - previous_map.get(scope_key, set())
+        },
+    )
+    return deleted
+
+
 def _scope_key_for_job(job: SummaryWarmupJob) -> str:
     return _scope_key_for_scope(job.scope)
 
@@ -149,3 +231,32 @@ def _target_period_map(targets: List[Dict[str, Any]]) -> Dict[str, set[str]]:
         entry = target_map.setdefault(scope_key, set())
         entry.update(str(period) for period in target.get("logical_periods", []))
     return target_map
+
+
+def _invalidate_canonical_units_for_period_map(
+    *,
+    store: SqliteCanonicalUnitStore,
+    calendar_key: str,
+    period_map: Dict[str, set[str]],
+) -> int:
+    deleted = 0
+    for scope_key, logical_periods in period_map.items():
+        for logical_period in sorted(logical_periods):
+            period = parse_time_range(logical_period)
+            if period is None:
+                continue
+            effective_start, effective_end = _coerce_nonempty_range(period.start, period.end)
+            deleted += store.delete_units(
+                scope_key=scope_key,
+                calendar_key=calendar_key,
+                unit_kinds=PERSISTED_UNIT_KINDS,
+                range_start=effective_start,
+                range_end=effective_end,
+            )
+    return deleted
+
+
+def _coerce_nonempty_range(range_start: datetime, range_end: datetime) -> tuple[datetime, datetime]:
+    if range_end > range_start:
+        return range_start, range_end
+    return range_start, range_start + timedelta(microseconds=1)
