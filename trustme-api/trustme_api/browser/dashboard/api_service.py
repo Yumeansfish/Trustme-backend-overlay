@@ -26,6 +26,7 @@ def build_summary_snapshot_response(
     db,
     settings_data: Dict[str, Any],
     summary_snapshot_store,
+    canonical_unit_store,
     range_start: datetime,
     range_end: datetime,
     category_periods: Sequence[str],
@@ -65,6 +66,8 @@ def build_summary_snapshot_response(
             category_periods=category_periods,
             scope=scope,
             store=summary_snapshot_store,
+            calendar_settings=settings_data,
+            canonical_unit_store=canonical_unit_store,
         ),
         category_periods=category_periods,
     )

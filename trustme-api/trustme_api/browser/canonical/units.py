@@ -2,13 +2,14 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import date, datetime, time as daytime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tuple
+from zoneinfo import ZoneInfo
 
 from .dashboard_domain_service import DashboardSummaryScope
-from .dashboard_summary_warmup import _resolve_local_timezone
 from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
 from .settings_schema import normalize_settings_data
-from .summary_snapshot import build_summary_snapshot_scope_key
+from .summary_snapshot_scope import build_summary_snapshot_scope_key
 from .summary_snapshot_categories import compile_category_rules, normalize_category_name
 from .summary_snapshot_models import PeriodBound, SummarySegment, datetime_to_ms
 from .summary_snapshot_response import (
@@ -28,6 +29,7 @@ SCENARIO_NAMES = (
     "custom_7d_partial",
     "custom_30d_partial",
 )
+LOCALTIME_PATH = Path("/etc/localtime")
 
 
 @dataclass(frozen=True)
@@ -291,6 +293,37 @@ def build_bucket_ranges(
     return buckets
 
 
+def infer_bucket_kind_for_logical_periods(
+    logical_periods: Sequence[str],
+    *,
+    profile: CalendarProfile,
+) -> Optional[str]:
+    inferred_kind: Optional[str] = None
+
+    for logical_period in logical_periods:
+        period = parse_time_range(logical_period)
+        if period is None:
+            return None
+
+        period_kind = next(
+            (
+                candidate
+                for candidate in ("hour", "day", "month")
+                if _is_full_unit_interval(period.start, period.end, candidate, profile)
+            ),
+            None,
+        )
+        if period_kind is None:
+            return None
+
+        if inferred_kind is None:
+            inferred_kind = period_kind
+        elif inferred_kind != period_kind:
+            return None
+
+    return inferred_kind
+
+
 def plan_covering_units(
     range_start: datetime,
     range_end: datetime,
@@ -410,6 +443,60 @@ class ExperimentalCanonicalQueryEngine:
         return {
             "response": build_snapshot_response(period_bounds, segments),
             "stats": stats.as_dict(),
+        }
+
+    def execute_logical_periods(
+        self,
+        *,
+        logical_periods: Sequence[str],
+        range_end: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        bucket_kind = infer_bucket_kind_for_logical_periods(
+            logical_periods,
+            profile=self.profile,
+        )
+        if bucket_kind is None:
+            raise ValueError("Unsupported logical periods for canonical hour/day execution")
+
+        compiled_rules = compile_category_rules(self.scope.categories)
+        category_cache: Dict[Tuple[str, str, str], List[str]] = {}
+        stats = QueryStats(bucket_count=len(logical_periods))
+        effective_range_end = self.profile.normalize(range_end) if range_end is not None else None
+
+        segments: Dict[str, SummarySegment] = {}
+        period_bounds: List[PeriodBound] = []
+        for logical_period in logical_periods:
+            period = parse_time_range(logical_period)
+            if period is None:
+                continue
+
+            period_bounds.append(
+                PeriodBound(
+                    logical_period,
+                    datetime_to_ms(period.start),
+                    datetime_to_ms(period.end),
+                )
+            )
+
+            effective_end = (
+                min(period.end, effective_range_end)
+                if effective_range_end is not None
+                else period.end
+            )
+            if effective_end <= period.start:
+                continue
+
+            segments[logical_period] = self._build_interval_segment(
+                TimeRange(bucket_kind, period.start, effective_end),
+                compiled_rules=compiled_rules,
+                category_cache=category_cache,
+                stats=stats,
+            )
+
+        return {
+            "response": build_snapshot_response(period_bounds, segments),
+            "stats": stats.as_dict(),
+            "bucket_kind": bucket_kind,
         }
 
     def _build_interval_segment(
@@ -595,6 +682,35 @@ def summarize_stats(stats_list: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
                 target = getattr(aggregate, field_name)
                 target[key] = target.get(key, 0) + int(value)
     return aggregate.as_dict()
+
+
+def parse_time_range(period: str) -> Optional[TimeRange]:
+    try:
+        start_iso, end_iso = period.split("/")
+        start = datetime.fromisoformat(start_iso.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(end_iso.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+    if end <= start:
+        return None
+
+    return TimeRange("", start, end)
+
+
+def _resolve_local_timezone():
+    try:
+        target = LOCALTIME_PATH.resolve()
+        parts = target.parts
+        if "zoneinfo" in parts:
+            index = parts.index("zoneinfo")
+            zone_name = "/".join(parts[index + 1 :])
+            if zone_name:
+                return ZoneInfo(zone_name)
+    except Exception:
+        pass
+
+    return datetime.now().astimezone().tzinfo or timezone.utc
 
 
 def _allowed_unit_kinds(bucket_kind: str, persisted_unit_kinds: Sequence[str]) -> List[str]:

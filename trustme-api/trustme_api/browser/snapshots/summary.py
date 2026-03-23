@@ -5,6 +5,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from .dashboard_domain_service import DashboardSummaryScope, build_ad_hoc_summary_scope
 from .dashboard_dto import SummarySnapshotResponse
 from .dashboard_summary_store import SummarySnapshotStore
+from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
+from .experimental_canonical_units import (
+    ExperimentalCanonicalQueryEngine,
+    infer_bucket_kind_for_logical_periods,
+)
 from .summary_snapshot_categories import compile_category_rules, normalize_category_name
 from .summary_snapshot_response import (
     build_snapshot_response,
@@ -36,6 +41,8 @@ def build_summary_snapshot(
     filter_categories: Sequence[Sequence[str]],
     always_active_pattern: str = "",
     store: Optional[SummarySnapshotStore] = None,
+    calendar_settings: Optional[Dict[str, Any]] = None,
+    canonical_unit_store=None,
     now: Optional[datetime] = None,
 ) -> SummarySnapshotResponse:
     scope = build_ad_hoc_summary_scope(
@@ -54,6 +61,8 @@ def build_summary_snapshot(
         category_periods=category_periods,
         scope=scope,
         store=store,
+        calendar_settings=calendar_settings,
+        canonical_unit_store=canonical_unit_store,
         now=now,
     )
 
@@ -66,6 +75,8 @@ def build_summary_snapshot_from_scope(
     category_periods: Sequence[str],
     scope: DashboardSummaryScope,
     store: Optional[SummarySnapshotStore] = None,
+    calendar_settings: Optional[Dict[str, Any]] = None,
+    canonical_unit_store=None,
     now: Optional[datetime] = None,
 ) -> SummarySnapshotResponse:
     now = now or datetime.now(timezone.utc)
@@ -84,6 +95,17 @@ def build_summary_snapshot_from_scope(
     )
     if range_end <= range_start or not period_bounds:
         return empty_summary_snapshot(category_periods)
+
+    canonical_response = _build_canonical_summary_snapshot_from_scope(
+        db,
+        range_end=range_end,
+        category_periods=category_periods,
+        scope=scope,
+        calendar_settings=calendar_settings,
+        canonical_unit_store=canonical_unit_store,
+    )
+    if canonical_response is not None:
+        return canonical_response
 
     scope_key = build_summary_snapshot_scope_key(
         window_buckets=scope.window_buckets,
@@ -156,3 +178,31 @@ def build_summary_snapshot_from_scope(
             )
 
     return build_snapshot_response(period_bounds, segments)
+
+
+def _build_canonical_summary_snapshot_from_scope(
+    db,
+    *,
+    range_end: datetime,
+    category_periods: Sequence[str],
+    scope: DashboardSummaryScope,
+    calendar_settings: Optional[Dict[str, Any]],
+    canonical_unit_store,
+) -> Optional[SummarySnapshotResponse]:
+    if not category_periods or calendar_settings is None or canonical_unit_store is None:
+        return None
+
+    engine = ExperimentalCanonicalQueryEngine(
+        db=db,
+        scope=scope,
+        settings_data=calendar_settings,
+        store=canonical_unit_store,
+        persisted_unit_kinds=PERSISTED_UNIT_KINDS,
+    )
+    if infer_bucket_kind_for_logical_periods(category_periods, profile=engine.profile) is None:
+        return None
+
+    return engine.execute_logical_periods(
+        logical_periods=category_periods,
+        range_end=range_end,
+    )["response"]

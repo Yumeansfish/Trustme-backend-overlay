@@ -25,11 +25,13 @@ class DashboardAPI:
         db,
         settings,
         summary_snapshot_store,
+        canonical_unit_store,
         get_buckets: Callable[[], Dict[str, Dict[str, Any]]],
     ) -> None:
         self.db = db
         self.settings = settings
         self.summary_snapshot_store = summary_snapshot_store
+        self.canonical_unit_store = canonical_unit_store
         self.get_buckets = get_buckets
 
     def summary_snapshot(
@@ -50,6 +52,7 @@ class DashboardAPI:
             db=self.db,
             settings_data=self.settings.get(""),
             summary_snapshot_store=self.summary_snapshot_store,
+            canonical_unit_store=self.canonical_unit_store,
             range_start=range_start,
             range_end=range_end,
             category_periods=category_periods,

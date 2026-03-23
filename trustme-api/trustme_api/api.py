@@ -31,6 +31,7 @@ from .dashboard_dto import (
     SummarySnapshotResponse,
 )
 from .dashboard_summary_store import SummarySnapshotStore
+from .experimental_canonical_store import SqliteCanonicalUnitStore
 from .dashboard_summary_warmup import build_bucket_records
 from .exceptions import BadRequest, NotFound
 from .public_names import bucket_display_name
@@ -77,10 +78,12 @@ class ServerAPI:
         self.testing = testing
         self.last_event = {}  # type: dict
         self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
+        self.canonical_unit_store = SqliteCanonicalUnitStore(testing=testing)
         self.dashboard = DashboardAPI(
             db=db,
             settings=self.settings,
             summary_snapshot_store=self.summary_snapshot_store,
+            canonical_unit_store=self.canonical_unit_store,
             get_buckets=self.get_buckets,
         )
 
