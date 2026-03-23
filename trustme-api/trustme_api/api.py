@@ -84,6 +84,57 @@ class ServerAPI:
             get_buckets=self.get_buckets,
         )
 
+    def _get_latest_bucket_event(self, bucket_id: str) -> Optional[Event]:
+        if bucket_id in self.last_event:
+            return self.last_event[bucket_id]
+
+        last_events = self.db[bucket_id].get(limit=1)
+        if not last_events:
+            return None
+        return last_events[0]
+
+    def _invalidate_summary_snapshots_for_retroactive_write(
+        self,
+        bucket_id: str,
+        *,
+        write_start: datetime,
+        latest_event: Optional[Event] = None,
+    ) -> int:
+        latest_event = latest_event or self._get_latest_bucket_event(bucket_id)
+        if latest_event is None:
+            return 0
+
+        latest_end = latest_event.timestamp + latest_event.duration
+        if write_start >= latest_end:
+            return 0
+
+        deleted = self.summary_snapshot_store.delete_segments()
+        if deleted:
+            logger.info(
+                "Invalidated %s summary snapshot segments after retroactive write in bucket '%s'",
+                deleted,
+                bucket_id,
+            )
+        return deleted
+
+    def _invalidate_summary_snapshots_for_event_deletion(
+        self,
+        bucket_id: str,
+        event: Optional[Event],
+    ) -> int:
+        if event is None:
+            return 0
+
+        deleted = self.summary_snapshot_store.delete_segments()
+        if deleted:
+            logger.info(
+                "Invalidated %s summary snapshot segments after deleting event %s from bucket '%s'",
+                deleted,
+                getattr(event, "id", None),
+                bucket_id,
+            )
+        return deleted
+
     def get_info(self) -> Dict[str, Any]:
         """Get server info"""
         payload = {
@@ -268,7 +319,16 @@ class ServerAPI:
         """Create events for a bucket. Can handle both single events and multiple ones.
 
         Returns the inserted event when a single event was inserted, otherwise None."""
-        return self.db[bucket_id].insert(events)
+        latest_event = self._get_latest_bucket_event(bucket_id)
+        earliest_timestamp = min((event.timestamp for event in events), default=None)
+        inserted = self.db[bucket_id].insert(events)
+        if earliest_timestamp is not None:
+            self._invalidate_summary_snapshots_for_retroactive_write(
+                bucket_id,
+                write_start=earliest_timestamp,
+                latest_event=latest_event,
+            )
+        return inserted
 
     @check_bucket_exists
     def get_eventcount(
@@ -284,7 +344,11 @@ class ServerAPI:
     @check_bucket_exists
     def delete_event(self, bucket_id: str, event_id) -> bool:
         """Delete a single event from a bucket"""
-        return self.db[bucket_id].delete(event_id)
+        event = self.db[bucket_id].get_by_id(event_id)
+        deleted = self.db[bucket_id].delete(event_id)
+        if deleted:
+            self._invalidate_summary_snapshots_for_event_deletion(bucket_id, event)
+        return deleted
 
     @check_bucket_exists
     def heartbeat(self, bucket_id: str, heartbeat: Event, pulsetime: float) -> Event:
@@ -365,6 +429,11 @@ class ServerAPI:
 
         self.db[bucket_id].insert(heartbeat)
         self.last_event[bucket_id] = heartbeat
+        self._invalidate_summary_snapshots_for_retroactive_write(
+            bucket_id,
+            write_start=heartbeat.timestamp,
+            latest_event=last_event,
+        )
         return heartbeat
 
     def query2(self, name, query, timeperiods, _cache):
