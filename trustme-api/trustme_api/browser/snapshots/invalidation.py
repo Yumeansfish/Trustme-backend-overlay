@@ -10,17 +10,9 @@ from .dashboard_summary_warmup import (
 from .summary_snapshot import build_summary_snapshot_scope_key
 
 
-def build_snapshot_invalidation_targets(
-    *,
-    settings_data: Dict[str, Any],
-    bucket_records: List[Dict[str, Any]],
-    now: Optional[datetime] = None,
+def build_snapshot_targets_from_jobs(
+    jobs: List[SummaryWarmupJob],
 ) -> List[Dict[str, Any]]:
-    jobs = build_dashboard_summary_warmup_jobs(
-        settings_data=settings_data,
-        bucket_records=bucket_records,
-        now=now,
-    )
     grouped_targets: Dict[str, Dict[str, Any]] = {}
 
     for job in jobs:
@@ -49,6 +41,34 @@ def build_snapshot_invalidation_targets(
     ]
 
 
+def build_snapshot_invalidation_targets(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: List[Dict[str, Any]],
+    now: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
+    jobs = build_dashboard_summary_warmup_jobs(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+        now=now,
+    )
+    return build_snapshot_targets_from_jobs(jobs)
+
+
+def invalidate_summary_snapshots_for_targets(
+    *,
+    store: SummarySnapshotStore,
+    targets: List[Dict[str, Any]],
+) -> int:
+    deleted = 0
+    for target in targets:
+        deleted += store.delete_segments(
+            scope_key=target["scope_key"],
+            logical_periods=target["logical_periods"],
+        )
+    return deleted
+
+
 def invalidate_summary_snapshots_for_settings(
     *,
     store: SummarySnapshotStore,
@@ -56,18 +76,12 @@ def invalidate_summary_snapshots_for_settings(
     bucket_records: List[Dict[str, Any]],
     now: Optional[datetime] = None,
 ) -> int:
-    deleted = 0
     targets = build_snapshot_invalidation_targets(
         settings_data=settings_data,
         bucket_records=bucket_records,
         now=now,
     )
-    for target in targets:
-        deleted += store.delete_segments(
-            scope_key=target["scope_key"],
-            logical_periods=target["logical_periods"],
-        )
-    return deleted
+    return invalidate_summary_snapshots_for_targets(store=store, targets=targets)
 
 
 def _scope_key_for_job(job: SummaryWarmupJob) -> str:

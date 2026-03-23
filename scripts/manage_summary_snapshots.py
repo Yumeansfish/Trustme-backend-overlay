@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
+import cProfile
+import io
 import json
 import sys
+import time
 from pathlib import Path
+import pstats
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -13,8 +17,14 @@ sys.path.insert(0, str(REPO_ROOT / "aw-core"))
 from aw_datastore import Datastore, get_storage_methods  # noqa: E402
 from aw_server.api import ServerAPI  # noqa: E402
 from aw_server.config import config  # noqa: E402
+from aw_server.dashboard_domain_service import build_bucket_records  # noqa: E402
+from aw_server.dashboard_summary_invalidation import (  # noqa: E402
+    build_snapshot_targets_from_jobs,
+    invalidate_summary_snapshots_for_targets,
+)
 from aw_server.dashboard_summary_warmup import (  # noqa: E402
     SUMMARY_WARMUP_PERIOD_ORDER,
+    build_dashboard_summary_warmup_jobs,
     warm_dashboard_summary_snapshots,
 )
 
@@ -78,6 +88,42 @@ def parse_args() -> argparse.Namespace:
         help="Restrict warmup to one or more configured device groups",
     )
 
+    benchmark_parser = subparsers.add_parser(
+        "benchmark",
+        help="Benchmark snapshot warmup with optional cold clears and profiling",
+    )
+    benchmark_parser.add_argument(
+        "--period",
+        action="append",
+        choices=SUMMARY_WARMUP_PERIOD_ORDER,
+        dest="periods",
+        default=[],
+        help="Restrict benchmark to one or more standard logical periods",
+    )
+    benchmark_parser.add_argument(
+        "--group",
+        action="append",
+        dest="groups",
+        default=[],
+        help="Restrict benchmark to one or more configured device groups",
+    )
+    benchmark_parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Number of benchmark runs to execute",
+    )
+    benchmark_parser.add_argument(
+        "--cold",
+        action="store_true",
+        help="Clear the targeted snapshot segments before each run",
+    )
+    benchmark_parser.add_argument(
+        "--profile-out",
+        default="",
+        help="Optional path to write a cProfile stats file for the first run",
+    )
+
     rebuild_parser = subparsers.add_parser(
         "rebuild",
         help="Clear snapshot segments and then run warmup",
@@ -100,6 +146,58 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def resolve_warmup_jobs(
+    server_api: ServerAPI,
+    *,
+    groups=None,
+    periods=None,
+):
+    server_api.settings.load()
+    settings_data = server_api.settings.get("")
+    bucket_records = build_bucket_records(server_api.get_buckets())
+    jobs = build_dashboard_summary_warmup_jobs(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+    )
+
+    allowed_groups = set(groups or [])
+    allowed_periods = set(periods or [])
+    if allowed_groups:
+        jobs = [job for job in jobs if job.group_name in allowed_groups]
+    if allowed_periods:
+        jobs = [job for job in jobs if job.period_name in allowed_periods]
+
+    return jobs
+
+
+def resolve_warmup_targets(
+    server_api: ServerAPI,
+    *,
+    groups=None,
+    periods=None,
+    scope_key: str | None = None,
+):
+    targets = build_snapshot_targets_from_jobs(
+        resolve_warmup_jobs(server_api, groups=groups, periods=periods)
+    )
+    if scope_key:
+        targets = [target for target in targets if target["scope_key"] == scope_key]
+    return targets
+
+
+def delete_warmup_targets(server_api: ServerAPI, *, groups=None, periods=None, scope_key: str | None = None) -> int:
+    targets = resolve_warmup_targets(
+        server_api,
+        groups=groups,
+        periods=periods,
+        scope_key=scope_key,
+    )
+    return invalidate_summary_snapshots_for_targets(
+        store=server_api.summary_snapshot_store,
+        targets=targets,
+    )
 
 
 def command_inspect(server_api: ServerAPI, args: argparse.Namespace) -> None:
@@ -134,11 +232,80 @@ def command_warmup(server_api: ServerAPI, args: argparse.Namespace) -> None:
     print(json.dumps({"warmed_jobs": jobs}, indent=2))
 
 
-def command_rebuild(server_api: ServerAPI, args: argparse.Namespace) -> None:
-    deleted = server_api.summary_snapshot_store.delete_segments(
-        scope_key=args.scope_key or None,
-        logical_periods=args.periods or None,
+def command_benchmark(server_api: ServerAPI, args: argparse.Namespace) -> None:
+    if args.repeat < 1:
+        raise ValueError("--repeat must be >= 1")
+
+    targets = resolve_warmup_targets(
+        server_api,
+        groups=args.groups or None,
+        periods=args.periods or None,
     )
+
+    durations = []
+    deleted_per_run = []
+    warmed_jobs = 0
+    profile_top = None
+
+    for index in range(args.repeat):
+        deleted = 0
+        if args.cold:
+            deleted = delete_warmup_targets(
+                server_api,
+                groups=args.groups or None,
+                periods=args.periods or None,
+            )
+
+        profiler = cProfile.Profile() if index == 0 and args.profile_out else None
+        started_at = time.perf_counter()
+        if profiler is not None:
+            profiler.enable()
+        warmed_jobs = warm_dashboard_summary_snapshots(
+            server_api,
+            group_names=args.groups or None,
+            period_names=args.periods or None,
+        )
+        if profiler is not None:
+            profiler.disable()
+        duration = time.perf_counter() - started_at
+
+        if profiler is not None:
+            profiler.dump_stats(args.profile_out)
+            stream = io.StringIO()
+            stats = pstats.Stats(profiler, stream=stream).sort_stats("cumulative")
+            stats.print_stats(20)
+            profile_top = stream.getvalue()
+
+        durations.append(duration)
+        deleted_per_run.append(deleted)
+
+    payload = {
+        "cold": bool(args.cold),
+        "repeat": args.repeat,
+        "targets": targets,
+        "warmed_jobs": warmed_jobs,
+        "deleted_per_run": deleted_per_run,
+        "durations_seconds": durations,
+        "min_duration_seconds": min(durations),
+        "max_duration_seconds": max(durations),
+        "avg_duration_seconds": sum(durations) / len(durations),
+    }
+    if args.profile_out:
+        payload["profile_out"] = args.profile_out
+        payload["profile_top"] = profile_top
+    print(json.dumps(payload, indent=2))
+
+
+def command_rebuild(server_api: ServerAPI, args: argparse.Namespace) -> None:
+    if args.scope_key or args.periods or args.groups:
+        deleted = delete_warmup_targets(
+            server_api,
+            groups=args.groups or None,
+            periods=args.periods or None,
+            scope_key=args.scope_key or None,
+        )
+    else:
+        deleted = server_api.summary_snapshot_store.delete_segments()
     jobs = warm_dashboard_summary_snapshots(
         server_api,
         group_names=args.groups or None,
@@ -157,6 +324,8 @@ def main() -> None:
         command_clear(server_api, args)
     elif args.command == "warmup":
         command_warmup(server_api, args)
+    elif args.command == "benchmark":
+        command_benchmark(server_api, args)
     elif args.command == "rebuild":
         command_rebuild(server_api, args)
     else:  # pragma: no cover

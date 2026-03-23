@@ -1,4 +1,5 @@
 import json
+import logging
 import traceback
 from functools import wraps
 from threading import Lock
@@ -17,10 +18,11 @@ from flask import (
 )
 from flask_restx import Api, Resource, fields
 
-from . import logger
 from .api import ServerAPI
 from .dashboard_rest import dashboard_api
 from .exceptions import BadRequest, Unauthorized
+
+logger = logging.getLogger(__name__)
 
 
 def host_header_check(f):
@@ -57,6 +59,15 @@ api = Api(
     description="Local API browser for trust-me.",
 )
 api.add_namespace(dashboard_api)
+
+
+def _sanitize_log_value(value) -> str:
+    return (
+        str(value)
+        .replace("\r\n", "\\r\\n")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+    )
 
 
 # Loads event and bucket schema from JSONSchema in aw_core
@@ -220,10 +231,12 @@ class EventsResource(Resource):
     @copy_doc(ServerAPI.create_events)
     def post(self, bucket_id):
         data = request.get_json()
+        safe_bucket_id = _sanitize_log_value(bucket_id)
+        safe_data = _sanitize_log_value(data)
         logger.debug(
-            "Received post request for event in bucket '{}' and data: {}".format(
-                bucket_id, data
-            )
+            "Received post request for event in bucket %s and data: %s",
+            safe_bucket_id,
+            safe_data,
         )
 
         if isinstance(data, dict):
@@ -257,8 +270,12 @@ class EventResource(Resource):
     @api.doc(model=event)
     @copy_doc(ServerAPI.get_event)
     def get(self, bucket_id: str, event_id: int):
+        safe_event_id = _sanitize_log_value(event_id)
+        safe_bucket_id = _sanitize_log_value(bucket_id)
         logger.debug(
-            f"Received get request for event with id '{event_id}' in bucket '{bucket_id}'"
+            "Received get request for event with id %s in bucket %s",
+            safe_event_id,
+            safe_bucket_id,
         )
         event = current_app.api.get_event(bucket_id, event_id)
         if event:
@@ -268,10 +285,12 @@ class EventResource(Resource):
 
     @copy_doc(ServerAPI.delete_event)
     def delete(self, bucket_id: str, event_id: int):
+        safe_event_id = _sanitize_log_value(event_id)
+        safe_bucket_id = _sanitize_log_value(bucket_id)
         logger.debug(
-            "Received delete request for event with id '{}' in bucket '{}'".format(
-                event_id, bucket_id
-            )
+            "Received delete request for event with id %s in bucket %s",
+            safe_event_id,
+            safe_bucket_id,
         )
         success = current_app.api.delete_event(bucket_id, event_id)
         return {"success": success}, 200

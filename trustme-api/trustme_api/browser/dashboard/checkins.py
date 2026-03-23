@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from aw_core.dirs import get_data_dir
 

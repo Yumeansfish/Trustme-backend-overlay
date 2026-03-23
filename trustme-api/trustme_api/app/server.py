@@ -1,11 +1,10 @@
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-import aw_datastore
 import flask.json.provider
-from aw_datastore import Datastore
+from aw_datastore import Datastore, get_storage_methods
 from flask import (
     Blueprint,
     Flask,
@@ -34,8 +33,8 @@ class AWFlask(Flask):
         host: str,
         testing: bool,
         storage_method=None,
-        cors_origins=[],
-        custom_static=dict(),
+        cors_origins: Optional[List[str]] = None,
+        custom_static: Optional[Dict[str, str]] = None,
         static_folder=static_folder,
         static_url_path="",
     ):
@@ -52,31 +51,29 @@ class AWFlask(Flask):
             static_url_path=static_url_path,
         )
         self.config["HOST"] = host  # needed for host-header check
+        resolved_cors_origins = list(cors_origins or [])
         with self.app_context():
-            _config_cors(cors_origins, testing)
+            _config_cors(resolved_cors_origins, testing)
 
         # Initialize datastore and API
         if storage_method is None:
-            storage_method = aw_datastore.get_storage_methods()["memory"]
+            storage_method = get_storage_methods()["memory"]
         db = Datastore(storage_method, testing=testing)
         self.api = ServerAPI(db=db, testing=testing)
 
         self.register_blueprint(root)
         self.register_blueprint(rest.blueprint)
-        self.register_blueprint(get_custom_static_blueprint(custom_static))
+        self.register_blueprint(get_custom_static_blueprint(custom_static or {}))
 
 
 class CustomJSONProvider(flask.json.provider.DefaultJSONProvider):
     # encoding/decoding of datetime as iso8601 strings
     # encoding of timedelta as second floats
     def default(self, obj, *args, **kwargs):
-        try:
-            if isinstance(obj, datetime):
-                return obj.isoformat()
-            if isinstance(obj, timedelta):
-                return obj.total_seconds()
-        except TypeError:
-            pass
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, timedelta):
+            return obj.total_seconds()
         return super().default(obj)
 
 
@@ -120,8 +117,8 @@ def _start(
     host: str,
     port: int,
     testing: bool = False,
-    cors_origins: List[str] = [],
-    custom_static: Dict[str, str] = dict(),
+    cors_origins: Optional[List[str]] = None,
+    custom_static: Optional[Dict[str, str]] = None,
 ):
     app = AWFlask(
         host,

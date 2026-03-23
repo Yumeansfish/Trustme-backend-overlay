@@ -79,42 +79,17 @@ def build_browser_summary(
     url_groups: Dict[str, Dict[str, object]] = {}
     title_groups: Dict[str, Dict[str, object]] = {}
     total_duration = 0.0
-    interval_index = 0
 
-    for event in browser_events:
-        event_interval = event_to_interval(event)
-        if event_interval is None:
-            continue
-
-        while (
-            interval_index < len(focus_intervals)
-            and focus_intervals[interval_index].end_ms <= event_interval.start_ms
-        ):
-            interval_index += 1
-
-        index = interval_index
-        while index < len(focus_intervals):
-            interval = focus_intervals[index]
-            if interval.start_ms >= event_interval.end_ms:
-                break
-
-            overlap_start = max(event_interval.start_ms, interval.start_ms)
-            overlap_end = min(event_interval.end_ms, interval.end_ms)
-            if overlap_end > overlap_start:
-                duration = (overlap_end - overlap_start) / 1000
-                total_duration += duration
-                _accumulate_browser_slice(
-                    event.data,
-                    overlap_start,
-                    duration,
-                    domain_groups,
-                    url_groups,
-                    title_groups,
-                )
-
-            if interval.end_ms >= event_interval.end_ms:
-                break
-            index += 1
+    for raw_data, timestamp_ms, duration in _iter_browser_overlaps(browser_events, focus_intervals):
+        total_duration += duration
+        _accumulate_browser_slice(
+            raw_data,
+            timestamp_ms,
+            duration,
+            domain_groups,
+            url_groups,
+            title_groups,
+        )
 
     return {
         "domains": _serialize_grouped_events(domain_groups, "$domain"),
@@ -161,6 +136,61 @@ def empty_browser_summary() -> Dict[str, object]:
 
 def empty_stopwatch_summary() -> Dict[str, object]:
     return {"stopwatch_events": []}
+
+
+def _iter_browser_overlaps(
+    browser_events: Sequence[Event],
+    focus_intervals: Sequence[NumericInterval],
+):
+    interval_index = 0
+    for event in browser_events:
+        event_interval = event_to_interval(event)
+        if event_interval is None:
+            continue
+
+        interval_index = _advance_focus_interval_index(
+            focus_intervals,
+            interval_index,
+            event_interval.start_ms,
+        )
+        for overlap_start, overlap_end in _iter_focus_interval_overlaps(
+            event_interval,
+            focus_intervals,
+            interval_index,
+        ):
+            yield event.data, overlap_start, (overlap_end - overlap_start) / 1000
+
+
+def _advance_focus_interval_index(
+    focus_intervals: Sequence[NumericInterval],
+    start_index: int,
+    event_start_ms: float,
+) -> int:
+    index = start_index
+    while index < len(focus_intervals) and focus_intervals[index].end_ms <= event_start_ms:
+        index += 1
+    return index
+
+
+def _iter_focus_interval_overlaps(
+    event_interval: NumericInterval,
+    focus_intervals: Sequence[NumericInterval],
+    start_index: int,
+):
+    index = start_index
+    while index < len(focus_intervals):
+        interval = focus_intervals[index]
+        if interval.start_ms >= event_interval.end_ms:
+            return
+
+        overlap_start = max(event_interval.start_ms, interval.start_ms)
+        overlap_end = min(event_interval.end_ms, interval.end_ms)
+        if overlap_end > overlap_start:
+            yield overlap_start, overlap_end
+
+        if interval.end_ms >= event_interval.end_ms:
+            return
+        index += 1
 
 
 def _build_browser_focus_intervals(

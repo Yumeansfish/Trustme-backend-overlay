@@ -73,62 +73,13 @@ def serialize_summary_segment(segment: SummarySegment) -> Dict[str, Any]:
 
 
 def merge_summary_segments(base: SummarySegment, delta: SummarySegment) -> SummarySegment:
-    apps = {
-        app: {
-            "duration": float(entry["duration"]),
-            "timestamp_ms": float(entry["timestamp_ms"]),
-        }
-        for app, entry in base.apps.items()
-    }
-    categories = {
-        key: {
-            "category": list(entry["category"]),
-            "duration": float(entry["duration"]),
-            "timestamp_ms": float(entry["timestamp_ms"]),
-        }
-        for key, entry in base.categories.items()
-    }
-    uncategorized_apps = {
-        app: {
-            "duration": float(entry["duration"]),
-            "timestamp_ms": float(entry["timestamp_ms"]),
-        }
-        for app, entry in base.uncategorized_apps.items()
-    }
+    apps = _clone_duration_entries(base.apps)
+    categories = _clone_category_entries(base.categories)
+    uncategorized_apps = _clone_duration_entries(base.uncategorized_apps)
 
-    for app, entry in delta.apps.items():
-        existing = apps.get(app)
-        if existing:
-            existing["duration"] += float(entry["duration"])
-            existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
-        else:
-            apps[app] = {
-                "duration": float(entry["duration"]),
-                "timestamp_ms": float(entry["timestamp_ms"]),
-            }
-
-    for key, entry in delta.categories.items():
-        existing = categories.get(key)
-        if existing:
-            existing["duration"] += float(entry["duration"])
-            existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
-        else:
-            categories[key] = {
-                "category": list(entry["category"]),
-                "duration": float(entry["duration"]),
-                "timestamp_ms": float(entry["timestamp_ms"]),
-            }
-
-    for app, entry in delta.uncategorized_apps.items():
-        existing = uncategorized_apps.get(app)
-        if existing:
-            existing["duration"] += float(entry["duration"])
-            existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
-        else:
-            uncategorized_apps[app] = {
-                "duration": float(entry["duration"]),
-                "timestamp_ms": float(entry["timestamp_ms"]),
-            }
+    _merge_duration_entries(apps, delta.apps)
+    _merge_category_entries(categories, delta.categories)
+    _merge_duration_entries(uncategorized_apps, delta.uncategorized_apps)
 
     return SummarySegment(
         logical_period=base.logical_period,
@@ -157,102 +108,153 @@ def build_snapshot_response(
             continue
 
         total_duration += segment.duration
-        for app, entry in segment.apps.items():
-            existing_app = app_durations.get(app)
-            if existing_app:
-                existing_app["duration"] += entry["duration"]
-                existing_app["timestamp_ms"] = min(
-                    existing_app["timestamp_ms"], entry["timestamp_ms"]
-                )
-            else:
-                app_durations[app] = dict(entry)
-
-        for key, entry in segment.categories.items():
-            existing_category = category_durations.get(key)
-            if existing_category:
-                existing_category["duration"] += entry["duration"]
-                existing_category["timestamp_ms"] = min(
-                    existing_category["timestamp_ms"], entry["timestamp_ms"]
-                )
-            else:
-                category_durations[key] = {
-                    "category": list(entry["category"]),
-                    "duration": float(entry["duration"]),
-                    "timestamp_ms": float(entry["timestamp_ms"]),
-                }
-
-        for app, entry in segment.uncategorized_apps.items():
-            existing_uncategorized = uncategorized_apps.get(app)
-            if existing_uncategorized:
-                existing_uncategorized["duration"] += entry["duration"]
-                existing_uncategorized["timestamp_ms"] = min(
-                    existing_uncategorized["timestamp_ms"], entry["timestamp_ms"]
-                )
-            else:
-                uncategorized_apps[app] = {
-                    "duration": float(entry["duration"]),
-                    "timestamp_ms": float(entry["timestamp_ms"]),
-                }
-
-        by_period[period.key] = {
-            "cat_events": [
-                build_event_json(
-                    period.start_ms,
-                    entry["duration"],
-                    {"$category": entry["category"]},
-                )
-                for entry in sorted(
-                    segment.categories.values(),
-                    key=lambda item: item["duration"],
-                    reverse=True,
-                )
-            ]
-        }
+        _merge_duration_entries(app_durations, segment.apps)
+        _merge_category_entries(category_durations, segment.categories)
+        _merge_duration_entries(uncategorized_apps, segment.uncategorized_apps)
+        by_period[period.key] = _build_period_snapshot(period, segment)
 
     return serialize_summary_snapshot_response(
         {
             "window": {
-                "app_events": [
-                    build_event_json(entry["timestamp_ms"], entry["duration"], {"app": app})
-                    for app, entry in sorted(
-                        app_durations.items(), key=lambda item: item[1]["duration"], reverse=True
-                    )[:LOCAL_AGGREGATION_LIMIT]
-                ],
+                "app_events": _build_duration_window_events(app_durations, "app"),
                 "title_events": [],
-                "cat_events": [
-                    build_event_json(
-                        entry["timestamp_ms"],
-                        entry["duration"],
-                        {"$category": entry["category"]},
-                    )
-                    for entry in sorted(
-                        category_durations.values(),
-                        key=lambda item: item["duration"],
-                        reverse=True,
-                    )[:LOCAL_AGGREGATION_LIMIT]
-                ],
+                "cat_events": _build_category_window_events(category_durations),
                 "active_events": [],
                 "duration": total_duration,
             },
             "by_period": by_period,
-            "uncategorized_rows": [
-                {
-                    "key": app,
-                    "app": app,
-                    "title": app,
-                    "subtitle": "",
-                    "duration": entry["duration"],
-                    "matchText": app,
-                }
-                for app, entry in sorted(
-                    uncategorized_apps.items(),
-                    key=lambda item: item[1]["duration"],
-                    reverse=True,
-                )[:LOCAL_AGGREGATION_LIMIT]
-            ],
+            "uncategorized_rows": _build_uncategorized_rows(uncategorized_apps),
         },
         category_periods=[period.key for period in period_bounds],
     )
+
+
+def _clone_duration_entries(entries: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
+    return {
+        key: {
+            "duration": float(entry["duration"]),
+            "timestamp_ms": float(entry["timestamp_ms"]),
+        }
+        for key, entry in entries.items()
+    }
+
+
+def _clone_category_entries(entries: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    return {
+        key: {
+            "category": list(entry["category"]),
+            "duration": float(entry["duration"]),
+            "timestamp_ms": float(entry["timestamp_ms"]),
+        }
+        for key, entry in entries.items()
+    }
+
+
+def _merge_duration_entries(
+    aggregated: Dict[str, Dict[str, float]],
+    incoming: Dict[str, Dict[str, Any]],
+) -> None:
+    for key, entry in incoming.items():
+        existing = aggregated.get(key)
+        if existing is None:
+            aggregated[key] = {
+                "duration": float(entry["duration"]),
+                "timestamp_ms": float(entry["timestamp_ms"]),
+            }
+            continue
+
+        existing["duration"] += float(entry["duration"])
+        existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
+
+
+def _merge_category_entries(
+    aggregated: Dict[str, Dict[str, Any]],
+    incoming: Dict[str, Dict[str, Any]],
+) -> None:
+    for key, entry in incoming.items():
+        existing = aggregated.get(key)
+        if existing is None:
+            aggregated[key] = {
+                "category": list(entry["category"]),
+                "duration": float(entry["duration"]),
+                "timestamp_ms": float(entry["timestamp_ms"]),
+            }
+            continue
+
+        existing["duration"] += float(entry["duration"])
+        existing["timestamp_ms"] = min(existing["timestamp_ms"], float(entry["timestamp_ms"]))
+
+
+def _build_period_snapshot(period: PeriodBound, segment: SummarySegment) -> Dict[str, Any]:
+    ordered_categories = sorted(
+        segment.categories.values(),
+        key=lambda item: item["duration"],
+        reverse=True,
+    )
+    return {
+        "cat_events": [
+            build_event_json(
+                period.start_ms,
+                entry["duration"],
+                {"$category": entry["category"]},
+            )
+            for entry in ordered_categories
+        ]
+    }
+
+
+def _build_duration_window_events(
+    aggregated: Dict[str, Dict[str, float]],
+    field_name: str,
+) -> list[Dict[str, Any]]:
+    ordered_items = sorted(
+        aggregated.items(),
+        key=lambda item: item[1]["duration"],
+        reverse=True,
+    )
+    return [
+        build_event_json(entry["timestamp_ms"], entry["duration"], {field_name: key})
+        for key, entry in ordered_items[:LOCAL_AGGREGATION_LIMIT]
+    ]
+
+
+def _build_category_window_events(
+    aggregated: Dict[str, Dict[str, Any]],
+) -> list[Dict[str, Any]]:
+    ordered_categories = sorted(
+        aggregated.values(),
+        key=lambda item: item["duration"],
+        reverse=True,
+    )
+    return [
+        build_event_json(
+            entry["timestamp_ms"],
+            entry["duration"],
+            {"$category": entry["category"]},
+        )
+        for entry in ordered_categories[:LOCAL_AGGREGATION_LIMIT]
+    ]
+
+
+def _build_uncategorized_rows(
+    uncategorized_apps: Dict[str, Dict[str, float]],
+) -> list[Dict[str, Any]]:
+    ordered_items = sorted(
+        uncategorized_apps.items(),
+        key=lambda item: item[1]["duration"],
+        reverse=True,
+    )
+    return [
+        {
+            "key": app,
+            "app": app,
+            "title": app,
+            "subtitle": "",
+            "duration": entry["duration"],
+            "matchText": app,
+        }
+        for app, entry in ordered_items[:LOCAL_AGGREGATION_LIMIT]
+    ]
 
 
 def build_event_json(timestamp_ms: float, duration: float, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -319,14 +319,9 @@ class ServerAPI:
             )
         )
 
-        # The endtime here is set such that in the event that the heartbeat is older than an
-        # existing event we should try to merge it with the last event before the heartbeat instead.
-        # FIXME: This (the endtime=heartbeat.timestamp) gets rid of the "heartbeat was older than last event"
-        #        warning and also causes a already existing "newer" event to be overwritten in the
-        #        replace_last call below. This is problematic.
-        # Solution: This could be solved if we were able to replace arbitrary events.
-        #           That way we could double check that the event has been applied
-        #           and if it hasn't we simply replace it with the updated counterpart.
+        # When an older heartbeat arrives, we still try to merge it with the latest stored event.
+        # This path is limited by the datastore API because replace_last can only update the newest
+        # event, not an arbitrary matching event deeper in the bucket history.
 
         last_event = None
         if bucket_id not in self.last_event:
@@ -372,7 +367,8 @@ class ServerAPI:
         self.last_event[bucket_id] = heartbeat
         return heartbeat
 
-    def query2(self, name, query, timeperiods, cache):
+    def query2(self, name, query, timeperiods, _cache):
+        compiled_query = "".join(query)
         result = []
         for timeperiod in timeperiods:
             period = timeperiod.split("/")[
@@ -380,8 +376,7 @@ class ServerAPI:
             ]  # iso8601 timeperiods are separated by a slash
             starttime = iso8601.parse_date(period[0])
             endtime = iso8601.parse_date(period[1])
-            query = "".join(query)
-            result.append(query2.query(name, query, starttime, endtime, self.db))
+            result.append(query2.query(name, compiled_query, starttime, endtime, self.db))
         return result
 
     def summary_snapshot(

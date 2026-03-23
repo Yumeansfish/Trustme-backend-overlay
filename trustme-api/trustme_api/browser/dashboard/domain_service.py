@@ -398,25 +398,41 @@ def _host_has_bucket_overlap(
     period_end_ms: float,
 ) -> bool:
     for bucket in bucket_records:
-        bucket_host = _bucket_host(bucket)
-        if bucket_host != host:
-            continue
-
-        start_ms = _bucket_start_ms(bucket)
-        end_ms = _bucket_end_ms(bucket)
-
-        if start_ms is not None and end_ms is not None:
-            if start_ms < period_end_ms and end_ms > period_start_ms:
-                return True
-            continue
-
-        if end_ms is not None and end_ms > period_start_ms:
+        if _bucket_matches_host_overlap(bucket, host, period_start_ms, period_end_ms):
             return True
-        if start_ms is not None and start_ms < period_end_ms:
-            return True
-        return True
 
     return False
+
+
+def _bucket_matches_host_overlap(
+    bucket: Dict[str, Any],
+    host: str,
+    period_start_ms: float,
+    period_end_ms: float,
+) -> bool:
+    if _bucket_host(bucket) != host:
+        return False
+    return _bucket_time_overlaps(
+        _bucket_start_ms(bucket),
+        _bucket_end_ms(bucket),
+        period_start_ms,
+        period_end_ms,
+    )
+
+
+def _bucket_time_overlaps(
+    start_ms: Optional[float],
+    end_ms: Optional[float],
+    period_start_ms: float,
+    period_end_ms: float,
+) -> bool:
+    if start_ms is not None and end_ms is not None:
+        return start_ms < period_end_ms and end_ms > period_start_ms
+    if end_ms is not None:
+        return end_ms > period_start_ms
+    if start_ms is not None:
+        return start_ms < period_end_ms
+    return True
 
 
 def _select_buckets_by_type(
