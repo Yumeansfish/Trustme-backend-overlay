@@ -1,3 +1,4 @@
+from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, TypedDict
 
 
@@ -283,6 +284,8 @@ def serialize_dashboard_details_response(payload: Any) -> DashboardDetailsRespon
 
 
 def serialize_dashboard_scope_response(payload: Any) -> DashboardScopeResponse:
+    if is_dataclass(payload):
+        payload = asdict(payload)
     if not isinstance(payload, Mapping):
         payload = {}
 
