@@ -8,24 +8,23 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "aw-server"))
-sys.path.insert(0, str(REPO_ROOT / "aw-core"))
+sys.path.insert(0, str(REPO_ROOT / "trustme-api"))
 
-from aw_datastore import Datastore, get_storage_methods  # noqa: E402
-from aw_server.api import ServerAPI  # noqa: E402
-from aw_server.config import config  # noqa: E402
-from aw_server.dashboard_domain_service import (  # noqa: E402
-    build_bucket_records,
-    build_dashboard_summary_scopes,
-)
-from aw_server.experimental_canonical_store import SqliteCanonicalUnitStore  # noqa: E402
-from aw_server.experimental_canonical_strategy import PERSISTED_UNIT_KINDS  # noqa: E402
-from aw_server.experimental_canonical_units import (  # noqa: E402
+from trustme_api.api import ServerAPI  # noqa: E402
+from trustme_api.app.config import config  # noqa: E402
+from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore  # noqa: E402
+from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS  # noqa: E402
+from trustme_api.browser.canonical.units import (  # noqa: E402
     ExperimentalCanonicalQueryEngine,
     SCENARIO_NAMES,
     build_benchmark_queries,
     summarize_stats,
 )
+from trustme_api.browser.dashboard.domain_service import (  # noqa: E402
+    build_bucket_records,
+    build_dashboard_summary_scopes,
+)
+from trustme_api.storage import Datastore, get_storage_methods  # noqa: E402
 
 
 def build_server_api(testing: bool, storage_name: str = "") -> ServerAPI:
@@ -44,7 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--storage",
         default="",
-        help="Override configured storage backend (defaults to aw-server config)",
+        help="Override configured storage backend (defaults to browser backend config)",
     )
     parser.add_argument(
         "--group",

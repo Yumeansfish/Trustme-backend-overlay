@@ -2,29 +2,42 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .dashboard_domain_service import DashboardSummaryScope, build_ad_hoc_summary_scope
-from .dashboard_dto import SummarySnapshotResponse
-from .dashboard_summary_store import SummarySnapshotStore
-from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
-from .experimental_canonical_units import (
+from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS
+from trustme_api.browser.canonical.units import (
     ExperimentalCanonicalQueryEngine,
     infer_bucket_kind_for_logical_periods,
 )
-from .summary_snapshot_categories import compile_category_rules, normalize_category_name
-from .summary_snapshot_response import (
+from trustme_api.browser.dashboard.domain_service import (
+    DashboardSummaryScope,
+    build_ad_hoc_summary_scope,
+)
+from trustme_api.browser.dashboard.dto import SummarySnapshotResponse
+from trustme_api.browser.snapshots.categories import (
+    compile_category_rules,
+    normalize_category_name,
+)
+from trustme_api.browser.snapshots.response import (
     build_snapshot_response,
     deserialize_segments,
     empty_summary_snapshot,
     merge_summary_segments,
     serialize_summary_segment,
 )
-from .summary_snapshot_scope import (
+from trustme_api.browser.snapshots.scope import (
     build_period_bounds,
     build_summary_snapshot_scope_key,
     expand_range_to_cover_periods,
 )
-from .summary_snapshot_segments import build_summary_segment, empty_summary_segment
-from .summary_snapshot_models import CompiledCategoryMatcher, SummarySegment, datetime_to_ms
+from trustme_api.browser.snapshots.segments import (
+    build_summary_segment,
+    empty_summary_segment,
+)
+from trustme_api.browser.snapshots.models import (
+    CompiledCategoryMatcher,
+    SummarySegment,
+    datetime_to_ms,
+)
+from trustme_api.browser.snapshots.store import SummarySnapshotStore
 
 
 def build_summary_snapshot(

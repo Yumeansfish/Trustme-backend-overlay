@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
-from .summary_snapshot_models import (
+from trustme_api.browser.snapshots.models import (
     CompiledCategoryMatcher,
     CompiledCategoryRule,
     CompiledCategoryTermRule,
@@ -28,7 +28,10 @@ def compile_category_rules(rules: Sequence[Any]) -> CompiledCategoryMatcher:
         exact_apps = _normalize_match_terms(definition.get("exact_apps"), ignore_case=ignore_case)
         domains = _normalize_match_terms(definition.get("domains"), ignore_case=ignore_case)
         aliases = _normalize_match_terms(definition.get("aliases"), ignore_case=ignore_case)
-        title_keywords = _normalize_match_terms(definition.get("title_keywords"), ignore_case=ignore_case)
+        title_keywords = _normalize_match_terms(
+            definition.get("title_keywords"),
+            ignore_case=ignore_case,
+        )
 
         if regex is None and not (exact_apps or domains or aliases or title_keywords):
             continue
@@ -58,7 +61,9 @@ def compile_category_rules(rules: Sequence[Any]) -> CompiledCategoryMatcher:
 
     for precedence, rule in enumerate(ordered_rules):
         for app in rule["exact_apps"]:
-            target_map = exact_apps_casefolded if rule["ignore_case"] else exact_apps_case_sensitive
+            target_map = (
+                exact_apps_casefolded if rule["ignore_case"] else exact_apps_case_sensitive
+            )
             target_map.setdefault(app, list(rule["category"]))
 
         for domain in rule["domains"]:

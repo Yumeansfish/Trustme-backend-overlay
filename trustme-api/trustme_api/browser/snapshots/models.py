@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
-from aw_core.models import Event
+from trustme_api.shared.models import Event
 
 
 LOCAL_AGGREGATION_LIMIT = 100
@@ -46,6 +46,7 @@ class CompiledCategoryMatcher:
     alias_rules: Tuple[CompiledCategoryTermRule, ...] = ()
     title_rules: Tuple[CompiledCategoryTermRule, ...] = ()
     regex_rules: Tuple[CompiledCategoryRule, ...] = ()
+
 
 @dataclass(frozen=True)
 class SummarySegment:

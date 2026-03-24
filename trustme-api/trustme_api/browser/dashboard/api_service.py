@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
 
-from .dashboard_details import build_dashboard_details
-from .dashboard_domain_service import (
+from trustme_api.browser.dashboard.details import build_dashboard_details
+from trustme_api.browser.dashboard.domain_service import (
     build_ad_hoc_summary_scope,
     build_settings_backed_summary_scope,
     resolve_default_dashboard_hosts,
     resolve_dashboard_scope as resolve_dashboard_scope_request,
 )
-from .dashboard_dto import (
+from trustme_api.browser.dashboard.dto import (
     DashboardDefaultHostsResponse,
     DashboardDetailsResponse,
     DashboardScopeResponse,
@@ -18,7 +18,7 @@ from .dashboard_dto import (
     serialize_dashboard_scope_response,
     serialize_summary_snapshot_response,
 )
-from .summary_snapshot import build_summary_snapshot_from_scope
+from trustme_api.browser.snapshots.summary import build_summary_snapshot_from_scope
 
 
 def build_summary_snapshot_response(

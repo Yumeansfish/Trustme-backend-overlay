@@ -3,10 +3,9 @@ import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from aw_core.models import Event
-
-from .summary_snapshot_categories import resolve_category_for_data
-from .summary_snapshot_models import (
+from trustme_api.shared.models import Event
+from trustme_api.browser.snapshots.categories import resolve_category_for_data
+from trustme_api.browser.snapshots.models import (
     CompiledCategoryMatcher,
     NumericInterval,
     PeriodBound,
@@ -195,7 +194,10 @@ def subtract_intervals(
     blocked_index = 0
 
     for base in merged_base:
-        while blocked_index < len(merged_blocked) and merged_blocked[blocked_index].end_ms <= base.start_ms:
+        while (
+            blocked_index < len(merged_blocked)
+            and merged_blocked[blocked_index].end_ms <= base.start_ms
+        ):
             blocked_index += 1
 
         cursor = base.start_ms

@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 from zoneinfo import ZoneInfo
 
-from .dashboard_domain_service import (
+from trustme_api.browser.dashboard.domain_service import (
     DashboardSummaryScope,
     build_bucket_records,
     build_dashboard_summary_scopes,
 )
-from .summary_snapshot import build_summary_snapshot_from_scope
+from trustme_api.browser.snapshots.summary import build_summary_snapshot_from_scope
 
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ def build_dashboard_summary_warmup_jobs(
 ) -> List[SummaryWarmupJob]:
     tz = local_timezone or _resolve_local_timezone()
     now_local = _normalize_now(now, tz)
-    from .settings_schema import normalize_settings_data
+    from trustme_api.browser.settings.schema import normalize_settings_data
     settings_data, _ = normalize_settings_data(settings_data)
     start_of_day = str(settings_data["startOfDay"])
     start_of_week = str(settings_data["startOfWeek"])
@@ -297,5 +297,7 @@ def _add_months(start: datetime, count: int) -> datetime:
     year = start.year + month_index // 12
     month = month_index % 12 + 1
     return start.replace(year=year, month=month)
+
+
 def _datetime_to_ms(value: datetime) -> float:
     return value.timestamp() * 1000

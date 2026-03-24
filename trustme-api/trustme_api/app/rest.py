@@ -6,9 +6,6 @@ from threading import Lock
 from typing import Dict
 
 import iso8601
-from aw_core import schema
-from aw_core.models import Event
-from aw_query.exceptions import QueryException
 from flask import (
     Blueprint,
     current_app,
@@ -17,10 +14,12 @@ from flask import (
     request,
 )
 from flask_restx import Api, Resource, fields
-
-from .api import ServerAPI
-from .dashboard_rest import dashboard_api
-from .exceptions import BadRequest, Unauthorized
+from trustme_api.api import ServerAPI
+from trustme_api.browser.dashboard.rest import dashboard_api
+from trustme_api.exceptions import BadRequest, Unauthorized
+from trustme_api.query.exceptions import QueryException
+from trustme_api.shared import schema
+from trustme_api.shared.models import Event
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ def _sanitize_log_value(value) -> str:
     )
 
 
-# Loads event and bucket schema from JSONSchema in aw_core
+# Loads event and bucket schema from the browser-line shared schema helpers.
 event = api.schema_model("Event", schema.get_json_schema("event"))
 bucket = api.schema_model("Bucket", schema.get_json_schema("bucket"))
 buckets_export = api.schema_model("Export", schema.get_json_schema("export"))

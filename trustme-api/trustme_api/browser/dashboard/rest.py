@@ -5,7 +5,8 @@ import iso8601
 from flask import current_app, jsonify, request
 from flask_restx import Namespace, Resource, fields
 
-from .exceptions import BadRequest
+from trustme_api.exceptions import BadRequest
+
 
 dashboard_api = Namespace(
     "dashboard",

@@ -1,16 +1,22 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from .dashboard_domain_service import DashboardSummaryScope, build_dashboard_summary_scopes
-from .dashboard_summary_store import SummarySnapshotStore
-from .experimental_canonical_store import SqliteCanonicalUnitStore
-from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
-from .experimental_canonical_units import build_calendar_profile, parse_time_range
-from .dashboard_summary_warmup import (
+from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore
+from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS
+from trustme_api.browser.canonical.units import (
+    build_calendar_profile,
+    parse_time_range,
+)
+from trustme_api.browser.dashboard.domain_service import (
+    DashboardSummaryScope,
+    build_dashboard_summary_scopes,
+)
+from trustme_api.browser.snapshots.scope import build_summary_snapshot_scope_key
+from trustme_api.browser.snapshots.store import SummarySnapshotStore
+from trustme_api.browser.snapshots.warmup import (
     SummaryWarmupJob,
     build_dashboard_summary_warmup_jobs,
 )
-from .summary_snapshot_scope import build_summary_snapshot_scope_key
 
 
 def build_snapshot_targets_from_jobs(

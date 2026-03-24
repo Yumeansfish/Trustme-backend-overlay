@@ -5,9 +5,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from aw_core.dirs import get_data_dir
-
-from .dashboard_dto import CheckinsResponse, serialize_checkins_response
+from trustme_api.shared.dirs import get_data_dir
+from trustme_api.browser.dashboard.dto import (
+    CheckinsResponse,
+    serialize_checkins_response,
+)
 
 
 CHECKIN_SESSION_GAP = timedelta(minutes=10)
@@ -43,7 +45,7 @@ class CheckinPair:
 
 
 def resolve_checkins_data_dir() -> Path:
-    bundled_dir = Path(__file__).resolve().parent / "checkins_data"
+    bundled_dir = Path(__file__).resolve().parents[3] / "aw_server" / "checkins_data"
     candidates = [
         os.getenv("TRUSTME_CHECKINS_DIR"),
         Path(get_data_dir("aw-server")) / "checkins",

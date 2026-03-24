@@ -1,8 +1,11 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, Sequence
 
-from .dashboard_dto import SummarySnapshotResponse, serialize_summary_snapshot_response
-from .summary_snapshot_models import (
+from trustme_api.browser.dashboard.dto import (
+    SummarySnapshotResponse,
+    serialize_summary_snapshot_response,
+)
+from trustme_api.browser.snapshots.models import (
     LOCAL_AGGREGATION_LIMIT,
     PeriodBound,
     SummarySegment,

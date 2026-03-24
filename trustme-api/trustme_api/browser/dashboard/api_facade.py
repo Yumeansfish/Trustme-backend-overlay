@@ -1,21 +1,21 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-from .checkins import build_checkins_payload
-from .dashboard_api_service import (
+from trustme_api.browser.dashboard.api_service import (
     build_dashboard_details_response,
     build_dashboard_scope_response,
     build_default_dashboard_hosts_response,
     build_summary_snapshot_response,
 )
-from .dashboard_dto import (
+from trustme_api.browser.dashboard.checkins import build_checkins_payload
+from trustme_api.browser.dashboard.dto import (
     CheckinsResponse,
-    DashboardDetailsResponse,
     DashboardDefaultHostsResponse,
+    DashboardDetailsResponse,
     DashboardScopeResponse,
     SummarySnapshotResponse,
 )
-from .dashboard_summary_warmup import build_bucket_records
+from trustme_api.browser.snapshots.warmup import build_bucket_records
 
 
 class DashboardAPI:

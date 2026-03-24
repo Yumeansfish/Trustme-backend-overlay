@@ -11,22 +11,21 @@ import pstats
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "aw-server"))
-sys.path.insert(0, str(REPO_ROOT / "aw-core"))
+sys.path.insert(0, str(REPO_ROOT / "trustme-api"))
 
-from aw_datastore import Datastore, get_storage_methods  # noqa: E402
-from aw_server.api import ServerAPI  # noqa: E402
-from aw_server.config import config  # noqa: E402
-from aw_server.dashboard_domain_service import build_bucket_records  # noqa: E402
-from aw_server.dashboard_summary_invalidation import (  # noqa: E402
+from trustme_api.api import ServerAPI  # noqa: E402
+from trustme_api.app.config import config  # noqa: E402
+from trustme_api.browser.dashboard.domain_service import build_bucket_records  # noqa: E402
+from trustme_api.browser.snapshots.invalidation import (  # noqa: E402
     build_snapshot_targets_from_jobs,
     invalidate_summary_snapshots_for_targets,
 )
-from aw_server.dashboard_summary_warmup import (  # noqa: E402
+from trustme_api.browser.snapshots.warmup import (  # noqa: E402
     SUMMARY_WARMUP_PERIOD_ORDER,
     build_dashboard_summary_warmup_jobs,
     warm_dashboard_summary_snapshots,
 )
+from trustme_api.storage import Datastore, get_storage_methods  # noqa: E402
 
 
 def build_server_api(testing: bool, storage_name: str = "") -> ServerAPI:
@@ -45,7 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--storage",
         default="",
-        help="Override configured storage backend (defaults to aw-server config)",
+        help="Override configured storage backend (defaults to browser backend config)",
     )
 
     subparsers = parser.add_subparsers(dest="command", required=True)

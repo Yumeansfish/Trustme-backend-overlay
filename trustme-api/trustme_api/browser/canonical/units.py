@@ -6,17 +6,27 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
-from .dashboard_domain_service import DashboardSummaryScope
-from .experimental_canonical_strategy import PERSISTED_UNIT_KINDS
-from .settings_schema import normalize_settings_data
-from .summary_snapshot_scope import build_summary_snapshot_scope_key
-from .summary_snapshot_categories import compile_category_rules, normalize_category_name
-from .summary_snapshot_models import PeriodBound, SummarySegment, datetime_to_ms
-from .summary_snapshot_response import (
+from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS
+from trustme_api.browser.dashboard.domain_service import DashboardSummaryScope
+from trustme_api.browser.settings.schema import normalize_settings_data
+from trustme_api.browser.snapshots.categories import (
+    compile_category_rules,
+    normalize_category_name,
+)
+from trustme_api.browser.snapshots.models import (
+    PeriodBound,
+    SummarySegment,
+    datetime_to_ms,
+)
+from trustme_api.browser.snapshots.response import (
     build_snapshot_response,
     merge_summary_segments,
 )
-from .summary_snapshot_segments import build_summary_segment, empty_summary_segment
+from trustme_api.browser.snapshots.scope import build_summary_snapshot_scope_key
+from trustme_api.browser.snapshots.segments import (
+    build_summary_segment,
+    empty_summary_segment,
+)
 
 
 UNIT_RANK = {"hour": 0, "day": 1, "month": 2}

@@ -117,7 +117,10 @@ def _build_knowledgebase_rule(category: Dict[str, Any]) -> Dict[str, Any]:
 
 def _load_seed_knowledgebase_categories() -> List[Dict[str, Any]]:
     seed_path = Path(__file__).with_name("settings_seed_knowledgebase.v1.json")
-    document = json.loads(seed_path.read_text())
+    if not seed_path.exists():
+        raise FileNotFoundError("Missing settings_seed_knowledgebase.v1.json")
+
+    document = json.loads(seed_path.read_text(encoding="utf-8"))
     return sorted(
         document.get("categories") or [],
         key=lambda category: CATEGORY_PRIORITY.get(str(category.get("name") or ""), 0),

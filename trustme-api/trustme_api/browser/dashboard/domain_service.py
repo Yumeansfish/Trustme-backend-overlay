@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from .settings_schema import normalize_settings_data
+from trustme_api.browser.settings.schema import normalize_settings_data
 
 
 DEFAULT_DEVICE_GROUP_NAME = "My macbook"
@@ -223,7 +223,14 @@ def resolve_default_dashboard_hosts(
         if valid_hosts:
             return valid_hosts
 
-    fallback_host = next((host for host in known_hosts if _host_supports_activity(bucket_records, host)), None)
+    fallback_host = next(
+        (
+            host
+            for host in known_hosts
+            if _host_supports_activity(bucket_records, host)
+        ),
+        None,
+    )
     if fallback_host:
         return [fallback_host]
 

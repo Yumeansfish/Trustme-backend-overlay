@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import argparse
 import collections.abc
+import importlib
 import importlib.util
 import json
 import sys
 import types
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, get_args, get_origin, is_typeddict
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_SOURCE = ROOT_DIR / "aw-server" / "aw_server" / "dashboard_dto.py"
+TRUSTME_API_DIR = ROOT_DIR / "trustme-api"
+DEFAULT_SOURCE = TRUSTME_API_DIR / "trustme_api" / "browser" / "dashboard_dto.py"
 DEFAULT_EXPORTS = [
     "EventData",
     "AggregatedEvent",
@@ -40,7 +43,7 @@ def parse_args() -> argparse.Namespace:
         "--source",
         type=Path,
         default=DEFAULT_SOURCE,
-        help="Path to dashboard_dto.py",
+        help="Path to the canonical dashboard DTO export module.",
     )
     parser.add_argument(
         "--output",
@@ -51,13 +54,57 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+@contextmanager
+def temporary_sys_path(path: Path):
+    path_str = str(path)
+    if path_str in sys.path:
+        yield
+        return
+
+    sys.path.insert(0, path_str)
+    try:
+        yield
+    finally:
+        if sys.path and sys.path[0] == path_str:
+            sys.path.pop(0)
+        elif path_str in sys.path:
+            sys.path.remove(path_str)
+
+
 def load_module(module_path: Path):
     spec = importlib.util.spec_from_file_location("dashboard_dto_codegen_source", module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Failed to load module from {module_path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    with temporary_sys_path(TRUSTME_API_DIR):
+        spec.loader.exec_module(module)
     return module
+
+
+def resolve_contract_source_path(module, fallback_path: Path) -> Path:
+    candidate_paths: list[Path] = []
+    with temporary_sys_path(TRUSTME_API_DIR):
+        for name in DEFAULT_EXPORTS:
+            exported = getattr(module, name, None)
+            origin_module_name = getattr(exported, "__module__", None)
+            if not isinstance(origin_module_name, str):
+                continue
+            origin_module = importlib.import_module(origin_module_name)
+            origin_file = getattr(origin_module, "__file__", None)
+            if origin_file:
+                candidate_paths.append(Path(origin_file).resolve())
+
+    if candidate_paths and all(path == candidate_paths[0] for path in candidate_paths):
+        return candidate_paths[0]
+
+    return fallback_path.resolve()
+
+
+def format_source_label(source_path: Path) -> str:
+    try:
+        return source_path.relative_to(ROOT_DIR).as_posix()
+    except ValueError:
+        return source_path.as_posix()
 
 
 def is_none_type(annotation: Any) -> bool:
@@ -149,12 +196,12 @@ def generate_contract(module, source_path: Path) -> str:
             raise RuntimeError(f"{name} is not a TypedDict in {source_path}")
         interfaces.append(render_typeddict(name, typed_dict))
 
-    relative_source = source_path.relative_to(ROOT_DIR)
+    relative_source = format_source_label(resolve_contract_source_path(module, source_path))
     header = [
         "// This file is generated. Do not edit it by hand.",
         (
             "// Source: "
-            f"{relative_source.as_posix()} via scripts/contracts/export_dashboard_contract_ts.py"
+            f"{relative_source} via scripts/contracts/export_dashboard_contract_ts.py"
         ),
         "",
     ]

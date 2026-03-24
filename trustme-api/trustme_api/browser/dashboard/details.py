@@ -3,11 +3,18 @@ from datetime import datetime
 from typing import Dict, List, Mapping, Sequence
 from urllib.parse import urlparse
 
-from aw_core.models import Event
-
-from .summary_snapshot_models import LOCAL_AGGREGATION_LIMIT, NumericInterval, duration_seconds
-from .summary_snapshot_response import build_event_json
-from .summary_snapshot_segments import event_to_interval, fetch_events, merge_intervals
+from trustme_api.shared.models import Event
+from trustme_api.browser.snapshots.models import (
+    LOCAL_AGGREGATION_LIMIT,
+    NumericInterval,
+    duration_seconds,
+)
+from trustme_api.browser.snapshots.response import build_event_json
+from trustme_api.browser.snapshots.segments import (
+    event_to_interval,
+    fetch_events,
+    merge_intervals,
+)
 
 
 BROWSER_APPNAME_REGEX = {

@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aw_core.dirs import get_config_dir
-
-from .settings_schema import canonicalize_setting_key, normalize_settings_data, normalize_setting_value
+from trustme_api.shared.dirs import get_config_dir
+from trustme_api.browser.settings.schema import (
+    canonicalize_setting_key,
+    normalize_settings_data,
+    normalize_setting_value,
+)
 
 
 class Settings:

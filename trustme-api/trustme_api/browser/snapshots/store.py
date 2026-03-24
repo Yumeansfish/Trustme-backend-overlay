@@ -4,7 +4,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from aw_core.dirs import get_data_dir
+from trustme_api.shared.dirs import get_data_dir
 
 
 SNAPSHOT_STORE_SCHEMA_VERSION = 2

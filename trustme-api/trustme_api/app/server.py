@@ -1,10 +1,10 @@
 import logging
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import flask.json.provider
-from aw_datastore import Datastore, get_storage_methods
 from flask import (
     Blueprint,
     Flask,
@@ -12,17 +12,17 @@ from flask import (
     send_from_directory,
 )
 from flask_cors import CORS
-
-from . import rest
-from .api import ServerAPI
-from .custom_static import get_custom_static_blueprint
-from .dashboard_summary_warmup import start_dashboard_summary_warmup
-from .log import FlaskLogHandler
+from trustme_api.api import ServerAPI
+from trustme_api.app import rest
+from trustme_api.app.custom_static import get_custom_static_blueprint
+from trustme_api.app.log import FlaskLogHandler
+from trustme_api.browser.snapshots.warmup import start_dashboard_summary_warmup
+from trustme_api.storage import Datastore, get_storage_methods
 
 logger = logging.getLogger(__name__)
 
-app_folder = os.path.dirname(os.path.abspath(__file__))
-static_folder = os.path.join(app_folder, "static")
+# Keep serving the existing bundled aw_server static asset tree until packaging moves.
+static_folder = str(Path(__file__).resolve().parents[2] / "aw_server" / "static")
 
 root = Blueprint("root", __name__, url_prefix="/")
 
@@ -84,12 +84,12 @@ def static_root():
 
 @root.route("/css/<path:path>")
 def static_css(path):
-    return send_from_directory(static_folder + "/css", path)
+    return send_from_directory(os.path.join(static_folder, "css"), path)
 
 
 @root.route("/js/<path:path>")
 def static_js(path):
-    return send_from_directory(static_folder + "/js", path)
+    return send_from_directory(os.path.join(static_folder, "js"), path)
 
 
 def _config_cors(cors_origins: List[str], testing: bool):
@@ -111,7 +111,7 @@ def _config_cors(cors_origins: List[str], testing: bool):
     CORS(current_app, resources={r"/api/*": {"origins": cors_origins}})
 
 
-# Only to be called from aw_server.main function!
+# Only to be called from trustme_api.main function!
 def _start(
     storage_method,
     host: str,

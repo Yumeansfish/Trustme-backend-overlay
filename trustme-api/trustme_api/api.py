@@ -14,33 +14,32 @@ from typing import (
 from uuid import uuid4
 
 import iso8601
-from aw_core.dirs import get_data_dir
-from aw_core.log import get_log_file_path
-from aw_core.models import Event
-from aw_query import query2
-from aw_transform import heartbeat_merge
-
-from .__about__ import __version__
-from .dashboard_api_facade import DashboardAPI
-from .dashboard_summary_invalidation import (
-    invalidate_canonical_units_for_bucket_time_range,
-    invalidate_canonical_units_for_settings,
-    invalidate_summary_snapshots_for_settings,
-)
-from .dashboard_dto import (
-    DashboardDetailsResponse,
+from trustme_api.__about__ import __version__
+from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore
+from trustme_api.browser.dashboard.api_facade import DashboardAPI
+from trustme_api.browser.dashboard.dto import (
     DashboardDefaultHostsResponse,
+    DashboardDetailsResponse,
     DashboardScopeResponse,
     CheckinsResponse,
     SummarySnapshotResponse,
 )
-from .dashboard_summary_store import SummarySnapshotStore
-from .experimental_canonical_store import SqliteCanonicalUnitStore
-from .dashboard_summary_warmup import build_bucket_records
-from .exceptions import BadRequest, NotFound
-from .public_names import bucket_display_name
-from .settings import Settings
-from .settings_schema import canonicalize_setting_key
+from trustme_api.browser.dashboard.public_names import bucket_display_name
+from trustme_api.browser.settings.schema import canonicalize_setting_key
+from trustme_api.browser.settings.service import Settings
+from trustme_api.browser.snapshots.invalidation import (
+    invalidate_canonical_units_for_bucket_time_range,
+    invalidate_canonical_units_for_settings,
+    invalidate_summary_snapshots_for_settings,
+)
+from trustme_api.browser.snapshots.store import SummarySnapshotStore
+from trustme_api.browser.snapshots.warmup import build_bucket_records
+from trustme_api.exceptions import BadRequest, NotFound
+from trustme_api.query import query2
+from trustme_api.shared.dirs import get_data_dir
+from trustme_api.shared.log import get_log_file_path
+from trustme_api.shared.models import Event
+from trustme_api.transform import heartbeat_merge
 
 logger = logging.getLogger(__name__)
 

@@ -3,8 +3,8 @@ import json
 from datetime import datetime, timezone
 from typing import Any, List, Sequence, Tuple
 
-from .summary_snapshot_categories import normalize_category_name
-from .summary_snapshot_models import PeriodBound, datetime_to_ms
+from trustme_api.browser.snapshots.categories import normalize_category_name
+from trustme_api.browser.snapshots.models import PeriodBound, datetime_to_ms
 
 
 def build_summary_snapshot_scope_key(
