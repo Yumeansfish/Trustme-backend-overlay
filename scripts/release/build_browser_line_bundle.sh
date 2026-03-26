@@ -24,6 +24,7 @@ FRONTEND_DIR="${FRONTEND_DIR:-$DEFAULT_FRONTEND_DIR}"
 BUILD_ROOT="${BUILD_ROOT:-$DEFAULT_BUILD_ROOT}"
 RELEASE_VERSION="${RELEASE_VERSION:-$(git -C "$REPO_ROOT" describe --tags --always --dirty)}"
 BUILD_PYTHON_VERSION="${BUILD_PYTHON_VERSION:-3.11}"
+BUILD_SWIFT_HELPER="${BUILD_SWIFT_HELPER:-0}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -34,9 +35,24 @@ require_cmd() {
 
 ensure_build_tooling() {
   ensure_build_python
+  BUILD_PYTHON_SITE_PACKAGES="$("$BUILD_PYTHON_BIN" - <<'PY'
+import sysconfig
+print(sysconfig.get_paths()["purelib"])
+PY
+)"
   if [[ -x "$TOOLS_VENV/bin/python" ]]; then
     current_version="$("$TOOLS_VENV/bin/python" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
     if [[ "$current_version" != "$BUILD_PYTHON_VERSION" ]]; then
+      rm -rf "$TOOLS_VENV"
+    fi
+  fi
+  if [[ -x "$TOOLS_VENV/bin/poetry" ]]; then
+    if ! "$TOOLS_VENV/bin/python" - <<'PY' >/dev/null 2>&1
+import packaging.licenses
+import poetry
+import PyInstaller
+PY
+    then
       rm -rf "$TOOLS_VENV"
     fi
   fi
@@ -84,6 +100,59 @@ platform_name() {
 
 sanitize_version() {
   printf '%s' "$1" | tr '/ ' '--'
+}
+
+patch_aw_watcher_window_for_release() {
+  local watcher_dir="$1"
+
+  python3 - "$watcher_dir" <<'PY'
+from pathlib import Path
+import sys
+
+watcher_dir = Path(sys.argv[1])
+
+config_path = watcher_dir / "aw_watcher_window" / "config.py"
+config_text = config_path.read_text(encoding="utf-8")
+old = 'strategy_macos = "swift"'
+new = 'strategy_macos = "jxa"'
+if old not in config_text:
+    raise SystemExit(f"expected {old!r} in {config_path}")
+config_path.write_text(config_text.replace(old, new, 1), encoding="utf-8")
+
+spec_path = watcher_dir / "aw-watcher-window.spec"
+spec_text = spec_path.read_text(encoding="utf-8")
+old_import = "import platform\n"
+new_import = "import os\nimport platform\n"
+if old_import in spec_text and new_import not in spec_text:
+    spec_text = spec_text.replace(old_import, new_import, 1)
+old_binaries = '    binaries=[("aw_watcher_window/aw-watcher-window-macos", "aw_watcher_window")] if platform.system() == "Darwin" else [],\n'
+new_binaries = (
+    '    binaries=[("aw_watcher_window/aw-watcher-window-macos", "aw_watcher_window")] '
+    'if platform.system() == "Darwin" and os.path.exists("aw_watcher_window/aw-watcher-window-macos") else [],\n'
+)
+if old_binaries not in spec_text:
+    raise SystemExit(f"expected aw-watcher-window binaries stanza in {spec_path}")
+spec_text = spec_text.replace(old_binaries, new_binaries, 1)
+spec_path.write_text(spec_text, encoding="utf-8")
+PY
+}
+
+patch_aw_server_for_release() {
+  local server_dir="$1"
+
+  python3 - "$server_dir" <<'PY'
+from pathlib import Path
+import sys
+
+server_dir = Path(sys.argv[1])
+makefile_path = server_dir / "Makefile"
+makefile_text = makefile_path.read_text(encoding="utf-8")
+old = 'VERSION=$$(grep -oP \'__version__ = "v\\K[^"]+\' aw_server/__about__.py | head -n1); echo $$VERSION; poetry version $$VERSION\n'
+new = """VERSION=$$(python - <<'PYVER'\nimport re\nfrom pathlib import Path\ntext = Path('aw_server/__about__.py').read_text(encoding='utf-8')\nmatch = re.search(r'__version__ = \"v([^\"]+)\"', text)\nif not match:\n    raise SystemExit('unable to detect aw-server version')\nprint(match.group(1))\nPYVER\n); echo $$VERSION; poetry version $$VERSION\n"""
+if old not in makefile_text:
+    raise SystemExit(f"expected GNU grep version extraction in {makefile_path}")
+makefile_path.write_text(makefile_text.replace(old, new, 1), encoding="utf-8")
+PY
 }
 
 write_metadata() {
@@ -163,7 +232,6 @@ echo "==> Copying upstream monorepo into worktree"
 mkdir -p "$(dirname "$WORKTREE_DIR")"
 rsync -a \
   --delete \
-  --exclude ".git" \
   --exclude ".github" \
   --exclude "__pycache__" \
   --exclude "build" \
@@ -180,6 +248,10 @@ python3 "$SCRIPT_DIR/render_overlay_aw_server.py" \
 rm -rf "$WORKTREE_DIR/aw-server"
 mkdir -p "$WORKTREE_DIR"
 rsync -a "$GENERATED_SERVER_DIR/" "$WORKTREE_DIR/aw-server/"
+
+echo "==> Applying release-time upstream adjustments"
+patch_aw_server_for_release "$WORKTREE_DIR/aw-server"
+patch_aw_watcher_window_for_release "$WORKTREE_DIR/aw-watcher-window"
 
 echo "==> Ensuring setuptools compatibility"
 "$TOOLS_VENV/bin/python" -m pip install 'setuptools>49.1.1'
@@ -210,12 +282,43 @@ install_main_dependencies() {
   )
 }
 
+package_module() {
+  local module="$1"
+  local module_dir="$WORKTREE_DIR/$module"
+
+  case "$module" in
+    aw-server)
+      (
+        cd "$module_dir"
+        poetry run python -m aw_server.__about__
+        VERSION="$(python3 - <<'PY'
+import re
+from pathlib import Path
+text = Path("aw_server/__about__.py").read_text(encoding="utf-8")
+match = re.search(r'__version__ = "v([^"]+)"', text)
+if not match:
+    raise SystemExit("unable to detect aw-server version")
+print(match.group(1))
+PY
+)"
+        echo "$VERSION"
+        poetry version "$VERSION"
+        rm -rf dist
+        PYTHONPATH="$BUILD_PYTHON_SITE_PACKAGES${PYTHONPATH:+:$PYTHONPATH}" pyinstaller aw-server.spec --clean --noconfirm
+      )
+      ;;
+    *)
+      PYTHONPATH="$BUILD_PYTHON_SITE_PACKAGES${PYTHONPATH:+:$PYTHONPATH}" make -C "$module_dir" package SKIP_WEBUI=true
+      ;;
+  esac
+}
+
 for module in "${BUILD_MODULES[@]}"; do
   echo "==> Building $module"
   case "$module" in
     aw-watcher-window)
       install_main_dependencies "$WORKTREE_DIR/$module"
-      if [[ "$PLATFORM" == "macos" ]]; then
+      if [[ "$PLATFORM" == "macos" && "$BUILD_SWIFT_HELPER" == "1" ]]; then
         make -C "$WORKTREE_DIR/$module" build-swift
       fi
       ;;
@@ -227,7 +330,7 @@ done
 
 for module in "${PACKAGE_MODULES[@]}"; do
   echo "==> Packaging $module"
-  make -C "$WORKTREE_DIR/$module" package SKIP_WEBUI=true
+  package_module "$module"
 done
 
 echo "==> Assembling portable browser-line bundle"
