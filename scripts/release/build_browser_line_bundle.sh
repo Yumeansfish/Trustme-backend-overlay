@@ -174,6 +174,19 @@ makefile_path.write_text(makefile_text.replace(old, new, 1), encoding="utf-8")
 PY
 }
 
+overlay_aw_qt_branding() {
+  local aw_qt_dir="$1"
+  local logo_source_dir="$FRONTEND_DIR/media/logo"
+  local logo_target_dir="$aw_qt_dir/media/logo"
+
+  if [[ ! -d "$logo_source_dir" ]]; then
+    return
+  fi
+
+  mkdir -p "$logo_target_dir"
+  rsync -a --delete "$logo_source_dir/" "$logo_target_dir/"
+}
+
 write_metadata() {
   python3 - "$METADATA_PATH" "$ASSET_NAME" "$RELEASE_VERSION" "$BACKEND_REV" "$FRONTEND_REV" "$UPSTREAM_REV" "$PLATFORM" "$ARCH" <<'PY'
 import json
@@ -271,6 +284,7 @@ rsync -a "$GENERATED_SERVER_DIR/" "$WORKTREE_DIR/aw-server/"
 echo "==> Applying release-time upstream adjustments"
 patch_aw_server_for_release "$WORKTREE_DIR/aw-server"
 patch_aw_watcher_window_for_release "$WORKTREE_DIR/aw-watcher-window"
+overlay_aw_qt_branding "$WORKTREE_DIR/aw-qt"
 
 echo "==> Ensuring setuptools compatibility"
 "$TOOLS_VENV/bin/python" -m pip install 'setuptools>49.1.1'
