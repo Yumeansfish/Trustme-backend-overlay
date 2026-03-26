@@ -185,6 +185,20 @@ overlay_aw_qt_branding() {
 
   mkdir -p "$logo_target_dir"
   rsync -a --delete "$logo_source_dir/" "$logo_target_dir/"
+
+  python3 - "$aw_qt_dir" <<'PY'
+from pathlib import Path
+import sys
+
+aw_qt_dir = Path(sys.argv[1])
+trayicon_path = aw_qt_dir / "aw_qt" / "trayicon.py"
+trayicon_text = trayicon_path.read_text(encoding="utf-8")
+old = """    if sys.platform == \"darwin\":\n        icon = QIcon(\"icons:black-monochrome-logo.png\")\n        # Allow macOS to use filters for changing the icon's color\n        icon.setIsMask(True)\n    else:\n        icon = QIcon(\"icons:logo.png\")\n"""
+new = """    icon = QIcon(\"icons:logo.png\")\n"""
+if old not in trayicon_text:
+    raise SystemExit(f"unexpected aw-qt trayicon branch in {trayicon_path}")
+trayicon_path.write_text(trayicon_text.replace(old, new, 1), encoding="utf-8")
+PY
 }
 
 write_metadata() {
