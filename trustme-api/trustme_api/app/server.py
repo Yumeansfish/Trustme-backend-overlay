@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -21,8 +22,37 @@ from trustme_api.storage import Datastore, get_storage_methods
 
 logger = logging.getLogger(__name__)
 
-# Keep serving the existing bundled aw_server static asset tree until packaging moves.
-static_folder = str(Path(__file__).resolve().parents[2] / "aw_server" / "static")
+
+def _resolve_static_folder() -> str:
+    module_path = Path(__file__).resolve()
+    candidates = [
+        module_path.parent / "static",
+        module_path.parents[1] / "static",
+        module_path.parents[2] / "static",
+        module_path.parents[2] / "aw_server" / "static",
+    ]
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        meipass_path = Path(meipass).resolve()
+        candidates.extend(
+            [
+                meipass_path / "static",
+                meipass_path / "aw_server" / "static",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.is_dir():
+            return str(candidate)
+
+    raise FileNotFoundError(
+        "Unable to locate bundled static assets. Checked: "
+        + ", ".join(str(path) for path in candidates)
+    )
+
+
+static_folder = _resolve_static_folder()
 
 root = Blueprint("root", __name__, url_prefix="/")
 
