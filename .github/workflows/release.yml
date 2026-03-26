@@ -1,0 +1,155 @@
+name: Browser-Line Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      frontend_ref:
+        description: Frontend git ref or SHA to package
+        required: false
+        default: main
+      upstream_ref:
+        description: ActivityWatch git ref or SHA to package
+        required: false
+        default: main
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref_name || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      FRONTEND_REPOSITORY: Yumeansfish/Trustme-frontend
+      UPSTREAM_REPOSITORY: ActivityWatch/activitywatch
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve refs
+        id: refs
+        run: |
+          frontend_ref="${{ github.event.inputs.frontend_ref || 'main' }}"
+          upstream_ref="${{ github.event.inputs.upstream_ref || 'main' }}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            release_version="${GITHUB_REF_NAME}"
+            release_tag="${GITHUB_REF_NAME}"
+            prerelease=false
+          else
+            release_version="latest-${GITHUB_SHA::7}"
+            release_tag="latest"
+            prerelease=true
+          fi
+          {
+            echo "frontend_ref=$frontend_ref"
+            echo "upstream_ref=$upstream_ref"
+            echo "release_version=$release_version"
+            echo "release_tag=$release_tag"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.FRONTEND_REPOSITORY }}
+          ref: ${{ steps.refs.outputs.frontend_ref }}
+          path: frontend
+          fetch-depth: 1
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPOSITORY }}
+          ref: ${{ steps.refs.outputs.upstream_ref }}
+          path: upstream/activitywatch
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry pyinstaller pyinstaller-hooks-contrib 'setuptools>49.1.1'
+
+      - name: Make scripts executable
+        run: chmod +x scripts/release/*.sh
+
+      - name: Build release bundle and site
+        env:
+          FRONTEND_DIR: ${{ github.workspace }}/frontend
+          UPSTREAM_DIR: ${{ github.workspace }}/upstream/activitywatch
+          BUILD_ROOT: ${{ github.workspace }}/upstream/build
+          RELEASE_VERSION: ${{ steps.refs.outputs.release_version }}
+          SITE_RELEASE_TAG: ${{ steps.refs.outputs.release_tag }}
+        run: make build-release
+
+      - name: Read artifact metadata
+        id: artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("upstream/build/dist/release-metadata.json").read_text())
+          with open(Path.cwd() / Path("artifact.env"), "w", encoding="utf-8") as handle:
+              handle.write(f"ASSET_NAME={payload['asset_name']}\n")
+          PY
+          source artifact.env
+          echo "asset_name=$ASSET_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.asset_name }}
+          path: upstream/build/dist/${{ steps.artifact.outputs.asset_name }}
+
+      - name: Move latest tag
+        if: github.ref_type != 'tag'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -f latest "$GITHUB_SHA"
+          git push origin refs/tags/latest --force
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.refs.outputs.release_tag }}
+          name: ${{ steps.refs.outputs.release_tag == 'latest' && 'Latest' || steps.refs.outputs.release_tag }}
+          prerelease: ${{ steps.refs.outputs.prerelease == 'true' }}
+          make_latest: ${{ steps.refs.outputs.prerelease != 'true' }}
+          generate_release_notes: ${{ steps.refs.outputs.prerelease != 'true' }}
+          overwrite_files: true
+          files: |
+            upstream/build/dist/${{ steps.artifact.outputs.asset_name }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: upstream/build/site
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
