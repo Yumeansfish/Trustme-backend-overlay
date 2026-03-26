@@ -134,6 +134,25 @@ if old_binaries not in spec_text:
     raise SystemExit(f"expected aw-watcher-window binaries stanza in {spec_path}")
 spec_text = spec_text.replace(old_binaries, new_binaries, 1)
 spec_path.write_text(spec_text, encoding="utf-8")
+
+main_path = watcher_dir / "aw_watcher_window" / "__main__.py"
+main_text = main_path.read_text(encoding="utf-8")
+old_main = """from aw_watcher_window import main
+
+if __name__ == "__main__":
+    main()
+"""
+new_main = """from multiprocessing import freeze_support
+
+from aw_watcher_window import main
+
+if __name__ == "__main__":
+    freeze_support()
+    main()
+"""
+if main_text != old_main:
+    raise SystemExit(f"unexpected aw-watcher-window __main__ contents in {main_path}")
+main_path.write_text(new_main, encoding="utf-8")
 PY
 }
 
@@ -275,10 +294,18 @@ PACKAGE_MODULES=(
 )
 
 install_main_dependencies() {
-  local module_dir="$1"
+  local module="$1"
+  local module_dir="$WORKTREE_DIR/$module"
   (
     cd "$module_dir"
-    poetry install --only main
+    case "$module" in
+      aw-qt)
+        poetry install --with pyqt
+        ;;
+      *)
+        poetry install --only main
+        ;;
+    esac
   )
 }
 
@@ -317,13 +344,13 @@ for module in "${BUILD_MODULES[@]}"; do
   echo "==> Building $module"
   case "$module" in
     aw-watcher-window)
-      install_main_dependencies "$WORKTREE_DIR/$module"
+      install_main_dependencies "$module"
       if [[ "$PLATFORM" == "macos" && "$BUILD_SWIFT_HELPER" == "1" ]]; then
         make -C "$WORKTREE_DIR/$module" build-swift
       fi
       ;;
     *)
-      install_main_dependencies "$WORKTREE_DIR/$module"
+      install_main_dependencies "$module"
       ;;
   esac
 done
