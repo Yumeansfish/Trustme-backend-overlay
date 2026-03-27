@@ -109,6 +109,14 @@ def build_summary_snapshot_from_scope(
     if range_end <= range_start or not period_bounds:
         return empty_summary_snapshot(category_periods)
 
+    if not _scope_has_snapshot_activity(
+        db,
+        range_start=range_start,
+        range_end=range_end,
+        scope=scope,
+    ):
+        return empty_summary_snapshot(category_periods)
+
     canonical_response = _build_canonical_summary_snapshot_from_scope(
         db,
         range_end=range_end,
@@ -121,6 +129,7 @@ def build_summary_snapshot_from_scope(
         return canonical_response
 
     scope_key = build_summary_snapshot_scope_key(
+        group_name=scope.group_name,
         window_buckets=scope.window_buckets,
         afk_buckets=scope.afk_buckets,
         stopwatch_buckets=scope.stopwatch_buckets,
@@ -219,3 +228,39 @@ def _build_canonical_summary_snapshot_from_scope(
         logical_periods=category_periods,
         range_end=range_end,
     )["response"]
+
+
+def _scope_has_snapshot_activity(
+    db,
+    *,
+    range_start: datetime,
+    range_end: datetime,
+    scope: DashboardSummaryScope,
+) -> bool:
+    if not scope.window_buckets or not scope.afk_buckets:
+        return False
+
+    if not _bucket_ids_have_events(db, scope.window_buckets, range_start, range_end):
+        return False
+
+    if not _bucket_ids_have_events(db, scope.afk_buckets, range_start, range_end):
+        return False
+
+    return True
+
+
+def _bucket_ids_have_events(
+    db,
+    bucket_ids: Sequence[str],
+    range_start: datetime,
+    range_end: datetime,
+) -> bool:
+    for bucket_id in bucket_ids:
+        if not isinstance(bucket_id, str) or not bucket_id:
+            continue
+        try:
+            if db[bucket_id].get_eventcount(range_start, range_end) > 0:
+                return True
+        except KeyError:
+            continue
+    return False

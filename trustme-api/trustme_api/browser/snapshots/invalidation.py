@@ -220,6 +220,7 @@ def _scope_key_for_job(job: SummaryWarmupJob) -> str:
 
 def _scope_key_for_scope(scope: DashboardSummaryScope) -> str:
     return build_summary_snapshot_scope_key(
+        group_name=scope.group_name,
         window_buckets=scope.window_buckets,
         afk_buckets=scope.afk_buckets,
         stopwatch_buckets=scope.stopwatch_buckets,

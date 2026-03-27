@@ -1,11 +1,16 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time as daytime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
+from zoneinfo import ZoneInfo
 
+from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
 from trustme_api.browser.settings.schema import normalize_settings_data
 
 
 DEFAULT_DEVICE_GROUP_NAME = "My macbook"
+AD_HOC_DASHBOARD_GROUP_NAME = "ad-hoc"
+LOCALTIME_PATH = Path("/etc/localtime")
 
 
 @dataclass(frozen=True)
@@ -23,12 +28,22 @@ class DashboardSummaryScope:
 
 @dataclass(frozen=True)
 class DashboardResolvedScope:
+    group_name: str
     requested_hosts: List[str]
     resolved_hosts: List[str]
     window_buckets: List[str]
     afk_buckets: List[str]
     browser_buckets: List[str]
     stopwatch_buckets: List[str]
+    available_dates: List[str]
+    earliest_available_date: str
+    latest_available_date: str
+
+
+@dataclass(frozen=True)
+class DashboardDefaultScope:
+    group_name: str
+    resolved_hosts: List[str]
 
 
 def build_bucket_records(raw_buckets: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -155,8 +170,11 @@ def resolve_dashboard_scope(
     settings_data: Dict[str, Any],
     bucket_records: Sequence[Dict[str, Any]],
     requested_hosts: Sequence[str],
+    requested_group_name: Optional[str] = None,
     overlap_start_ms: Optional[float] = None,
     overlap_end_ms: Optional[float] = None,
+    db=None,
+    availability_store: Optional[DashboardAvailabilityStore] = None,
 ) -> DashboardResolvedScope:
     settings_data, _ = normalize_settings_data(settings_data)
     known_hosts = _extract_known_hosts(bucket_records)
@@ -165,11 +183,21 @@ def resolve_dashboard_scope(
         settings_data["deviceMappings"],
         known_hosts,
     )
-    expanded_hosts = _expand_requested_hosts_to_effective_groups(
-        normalized_requested_hosts,
-        effective_mappings,
-    )
-    resolved_hosts = list(expanded_hosts)
+    group_name = _resolve_requested_group_name(requested_group_name, effective_mappings)
+    if group_name:
+        resolved_hosts = list(effective_mappings.get(group_name, []))
+        if not normalized_requested_hosts:
+            normalized_requested_hosts = list(resolved_hosts)
+    else:
+        expanded_hosts = _expand_requested_hosts_to_effective_groups(
+            normalized_requested_hosts,
+            effective_mappings,
+        )
+        resolved_hosts = list(expanded_hosts)
+        group_name = _infer_group_name_from_hosts(resolved_hosts, effective_mappings)
+
+    if not group_name:
+        group_name = _normalize_group_name(requested_group_name) or AD_HOC_DASHBOARD_GROUP_NAME
 
     if (
         resolved_hosts
@@ -187,39 +215,62 @@ def resolve_dashboard_scope(
             )
         ]
 
+    window_buckets = _select_window_buckets(bucket_records, resolved_hosts)
+    afk_buckets = _select_buckets_by_type(bucket_records, resolved_hosts, "afkstatus")
+    browser_buckets = _select_browser_buckets(bucket_records, resolved_hosts)
+    stopwatch_buckets = _select_stopwatch_buckets(bucket_records, resolved_hosts)
+    available_dates, earliest_available_date, latest_available_date = (
+        _resolve_dashboard_availability(
+            settings_data=settings_data,
+            bucket_records=bucket_records,
+            group_name=group_name,
+            resolved_hosts=resolved_hosts,
+            window_buckets=window_buckets,
+            afk_buckets=afk_buckets,
+            db=db,
+            availability_store=availability_store,
+        )
+        if availability_store is not None and db is not None
+        else ([], "", "")
+    )
+
     return DashboardResolvedScope(
+        group_name=group_name,
         requested_hosts=normalized_requested_hosts,
         resolved_hosts=resolved_hosts,
-        window_buckets=_select_window_buckets(bucket_records, resolved_hosts),
-        afk_buckets=_select_buckets_by_type(bucket_records, resolved_hosts, "afkstatus"),
-        browser_buckets=_select_browser_buckets(bucket_records, resolved_hosts),
-        stopwatch_buckets=_select_stopwatch_buckets(bucket_records, resolved_hosts),
+        window_buckets=window_buckets,
+        afk_buckets=afk_buckets,
+        browser_buckets=browser_buckets,
+        stopwatch_buckets=stopwatch_buckets,
+        available_dates=available_dates,
+        earliest_available_date=earliest_available_date,
+        latest_available_date=latest_available_date,
     )
 
 
-def resolve_default_dashboard_hosts(
+def resolve_default_dashboard_scope(
     *,
     settings_data: Dict[str, Any],
     bucket_records: Sequence[Dict[str, Any]],
-) -> List[str]:
+) -> DashboardDefaultScope:
     settings_data, _ = normalize_settings_data(settings_data)
     known_hosts = _extract_known_hosts(bucket_records)
     if not known_hosts:
-        return []
+        return DashboardDefaultScope(group_name="", resolved_hosts=[])
 
     effective_mappings = _get_effective_device_mappings(
         settings_data["deviceMappings"],
         known_hosts,
     )
 
-    for group_hosts in effective_mappings.values():
+    for group_name, group_hosts in effective_mappings.items():
         valid_hosts = [
             host
             for host in group_hosts
             if _host_supports_activity(bucket_records, host)
         ]
         if valid_hosts:
-            return valid_hosts
+            return DashboardDefaultScope(group_name=group_name, resolved_hosts=valid_hosts)
 
     fallback_host = next(
         (
@@ -230,9 +281,367 @@ def resolve_default_dashboard_hosts(
         None,
     )
     if fallback_host:
-        return [fallback_host]
+        return DashboardDefaultScope(
+            group_name=_infer_group_name_from_hosts([fallback_host], effective_mappings)
+            or DEFAULT_DEVICE_GROUP_NAME,
+            resolved_hosts=[fallback_host],
+        )
 
-    return known_hosts[:1]
+    fallback_hosts = known_hosts[:1]
+    return DashboardDefaultScope(
+        group_name=_infer_group_name_from_hosts(fallback_hosts, effective_mappings)
+        or DEFAULT_DEVICE_GROUP_NAME,
+        resolved_hosts=fallback_hosts,
+    )
+
+
+def resolve_default_dashboard_hosts(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+) -> List[str]:
+    return resolve_default_dashboard_scope(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+    ).resolved_hosts
+
+
+def resolve_group_names_for_host(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+    host: str,
+) -> List[str]:
+    settings_data, _ = normalize_settings_data(settings_data)
+    known_hosts = _extract_known_hosts(bucket_records)
+    effective_mappings = _get_effective_device_mappings(
+        settings_data["deviceMappings"],
+        known_hosts,
+    )
+    return [
+        group_name
+        for group_name, group_hosts in effective_mappings.items()
+        if host in group_hosts
+    ]
+
+
+def resolve_logical_days_for_range(
+    *,
+    settings_data: Dict[str, Any],
+    range_start: datetime,
+    range_end: datetime,
+) -> List[str]:
+    normalized_settings, _ = normalize_settings_data(settings_data)
+    if range_end <= range_start:
+        return []
+
+    local_timezone = _resolve_local_timezone()
+    start_of_day = str(normalized_settings["startOfDay"])
+    start_day = _logical_date(range_start, start_of_day, local_timezone)
+    end_reference = range_end - timedelta(milliseconds=1)
+    end_day = _logical_date(end_reference, start_of_day, local_timezone)
+
+    days: List[str] = []
+    cursor = start_day
+    while cursor <= end_day:
+        days.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return days
+
+
+def _normalize_group_name(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _resolve_requested_group_name(
+    requested_group_name: Any,
+    effective_mappings: Dict[str, List[str]],
+) -> str:
+    normalized = _normalize_group_name(requested_group_name)
+    return normalized if normalized in effective_mappings else ""
+
+
+def _infer_group_name_from_hosts(
+    hosts: Sequence[str],
+    effective_mappings: Dict[str, List[str]],
+) -> str:
+    host_set = {host for host in hosts if isinstance(host, str) and host}
+    if not host_set:
+        return ""
+
+    for group_name, group_hosts in effective_mappings.items():
+        if host_set.issubset(set(group_hosts)):
+            return group_name
+
+    return ""
+
+
+def _resolve_dashboard_availability(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+    group_name: str,
+    resolved_hosts: Sequence[str],
+    window_buckets: Sequence[str],
+    afk_buckets: Sequence[str],
+    db,
+    availability_store: DashboardAvailabilityStore,
+) -> tuple[List[str], str, str]:
+    if not group_name or not resolved_hosts or not window_buckets or not afk_buckets:
+        if group_name:
+            availability_store.clear_group(group_name)
+        return [], "", ""
+
+    day_bounds = _resolve_availability_day_bounds(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+        bucket_ids=[*window_buckets, *afk_buckets],
+    )
+    if day_bounds is None:
+        availability_store.clear_group(group_name)
+        return [], "", ""
+
+    start_day, end_day = day_bounds
+    hosts_signature = ",".join(sorted(dict.fromkeys(resolved_hosts)))
+    coverage = availability_store.get_coverage(group_name)
+    if (
+        coverage is None
+        or coverage.hosts_signature != hosts_signature
+        or coverage.start_day != start_day
+        or coverage.end_day != end_day
+    ):
+        available_dates = _rebuild_dashboard_availability_days(
+            settings_data=settings_data,
+            group_name=group_name,
+            hosts_signature=hosts_signature,
+            start_day=start_day,
+            end_day=end_day,
+            window_buckets=window_buckets,
+            afk_buckets=afk_buckets,
+            db=db,
+            availability_store=availability_store,
+        )
+    else:
+        available_dates = availability_store.list_available_days(group_name)
+
+    earliest = available_dates[0] if available_dates else ""
+    latest = available_dates[-1] if available_dates else ""
+    return available_dates, earliest, latest
+
+
+def _resolve_availability_day_bounds(
+    *,
+    settings_data: Dict[str, Any],
+    bucket_records: Sequence[Dict[str, Any]],
+    bucket_ids: Sequence[str],
+) -> Optional[tuple[str, str]]:
+    bucket_ids_set = {bucket_id for bucket_id in bucket_ids if isinstance(bucket_id, str) and bucket_id}
+    if not bucket_ids_set:
+        return None
+
+    starts = []
+    ends = []
+    for bucket in bucket_records:
+        bucket_id = bucket.get("id")
+        if not isinstance(bucket_id, str) or bucket_id not in bucket_ids_set:
+            continue
+        start_ms = _bucket_start_ms(bucket)
+        end_ms = _bucket_end_ms(bucket)
+        if start_ms is not None:
+            starts.append(start_ms)
+        if end_ms is not None:
+            ends.append(end_ms)
+
+    if not starts or not ends:
+        return None
+
+    normalized_settings, _ = normalize_settings_data(settings_data)
+    start_of_day = str(normalized_settings["startOfDay"])
+    local_timezone = _resolve_local_timezone()
+    start_dt = datetime.fromtimestamp(min(starts) / 1000, tz=timezone.utc)
+    end_dt = datetime.fromtimestamp(max(ends) / 1000, tz=timezone.utc) - timedelta(milliseconds=1)
+    return (
+        _logical_date(start_dt, start_of_day, local_timezone).isoformat(),
+        _logical_date(end_dt, start_of_day, local_timezone).isoformat(),
+    )
+
+
+def _rebuild_dashboard_availability_days(
+    *,
+    settings_data: Dict[str, Any],
+    group_name: str,
+    hosts_signature: str,
+    start_day: str,
+    end_day: str,
+    window_buckets: Sequence[str],
+    afk_buckets: Sequence[str],
+    db,
+    availability_store: DashboardAvailabilityStore,
+) -> List[str]:
+    normalized_settings, _ = normalize_settings_data(settings_data)
+    start_of_day = str(normalized_settings["startOfDay"])
+    local_timezone = _resolve_local_timezone()
+    range_start, _ = _logical_day_bounds(
+        date.fromisoformat(start_day),
+        start_of_day=start_of_day,
+        local_timezone=local_timezone,
+    )
+    _, range_end = _logical_day_bounds(
+        date.fromisoformat(end_day),
+        start_of_day=start_of_day,
+        local_timezone=local_timezone,
+    )
+
+    window_days = _collect_bucket_logical_days(
+        db,
+        window_buckets,
+        range_start=range_start,
+        range_end=range_end,
+        start_of_day=start_of_day,
+        local_timezone=local_timezone,
+    )
+    afk_days = _collect_bucket_logical_days(
+        db,
+        afk_buckets,
+        range_start=range_start,
+        range_end=range_end,
+        start_of_day=start_of_day,
+        local_timezone=local_timezone,
+    )
+    available_days = sorted(window_days & afk_days)
+
+    availability_store.replace_group_days(
+        group_name=group_name,
+        hosts_signature=hosts_signature,
+        start_day=start_day,
+        end_day=end_day,
+        available_days=available_days,
+    )
+    return available_days
+
+
+def _collect_bucket_logical_days(
+    db,
+    bucket_ids: Sequence[str],
+    range_start: datetime,
+    range_end: datetime,
+    *,
+    start_of_day: str,
+    local_timezone,
+) -> set[str]:
+    logical_days: set[str] = set()
+    for bucket_id in _dedupe_strings(bucket_ids):
+        if not isinstance(bucket_id, str) or not bucket_id:
+            continue
+        try:
+            events = db[bucket_id].get(-1, range_start, range_end)
+        except KeyError:
+            continue
+
+        for event in events:
+            logical_days.update(
+                _event_logical_days(
+                    event,
+                    range_start=range_start,
+                    range_end=range_end,
+                    start_of_day=start_of_day,
+                    local_timezone=local_timezone,
+                )
+            )
+
+    return logical_days
+
+
+def _event_logical_days(
+    event,
+    *,
+    range_start: datetime,
+    range_end: datetime,
+    start_of_day: str,
+    local_timezone,
+) -> List[str]:
+    timestamp = getattr(event, "timestamp", None)
+    duration = getattr(event, "duration", None)
+    if timestamp is None:
+        return []
+
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+    if isinstance(duration, timedelta):
+        duration_delta = duration
+    elif isinstance(duration, (int, float)):
+        duration_delta = timedelta(seconds=float(duration))
+    else:
+        duration_delta = timedelta(0)
+
+    event_start = max(timestamp, range_start)
+    raw_event_end = timestamp + duration_delta
+    event_end = min(raw_event_end, range_end)
+    if event_end <= event_start:
+        event_end = min(range_end, event_start + timedelta(microseconds=1))
+
+    start_day = _logical_date(event_start, start_of_day, local_timezone)
+    end_day = _logical_date(
+        event_end - timedelta(microseconds=1),
+        start_of_day,
+        local_timezone,
+    )
+
+    days: List[str] = []
+    cursor = start_day
+    while cursor <= end_day:
+        days.append(cursor.isoformat())
+        cursor += timedelta(days=1)
+    return days
+
+
+def _logical_day_bounds(
+    logical_day: date,
+    *,
+    start_of_day: str,
+    local_timezone,
+) -> tuple[datetime, datetime]:
+    hours, minutes = _parse_start_of_day(start_of_day)
+    start = datetime.combine(
+        logical_day,
+        daytime(hour=hours, minute=minutes),
+        tzinfo=local_timezone,
+    )
+    return start, start + timedelta(days=1)
+
+
+def _logical_date(value: datetime, start_of_day: str, local_timezone) -> date:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return (value.astimezone(local_timezone) - _offset_duration(start_of_day)).date()
+
+
+def _resolve_local_timezone():
+    try:
+        target = LOCALTIME_PATH.resolve()
+        parts = target.parts
+        if "zoneinfo" in parts:
+            index = parts.index("zoneinfo")
+            zone_name = "/".join(parts[index + 1 :])
+            if zone_name:
+                return ZoneInfo(zone_name)
+    except Exception:
+        pass
+
+    return datetime.now().astimezone().tzinfo or timezone.utc
+
+
+def _parse_start_of_day(value: str) -> tuple[int, int]:
+    parts = value.split(":")
+    hours = int(parts[0]) if parts and parts[0] else 0
+    minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+    return hours, minutes
+
+
+def _offset_duration(start_of_day: str) -> timedelta:
+    hours, minutes = _parse_start_of_day(start_of_day)
+    return timedelta(hours=hours, minutes=minutes)
 
 
 def _dedupe_strings(values: Sequence[str]) -> List[str]:

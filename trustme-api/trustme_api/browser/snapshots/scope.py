@@ -9,6 +9,7 @@ from trustme_api.browser.snapshots.models import PeriodBound, datetime_to_ms
 
 def build_summary_snapshot_scope_key(
     *,
+    group_name: str,
     window_buckets: Sequence[str],
     afk_buckets: Sequence[str],
     stopwatch_buckets: Sequence[str],
@@ -29,6 +30,7 @@ def build_summary_snapshot_scope_key(
     )
     payload = {
         "version": 1,
+        "group_name": group_name or "",
         "window_buckets": normalized_window_buckets,
         "afk_buckets": normalized_afk_buckets,
         "stopwatch_buckets": normalized_stopwatch_buckets,

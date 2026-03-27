@@ -390,6 +390,7 @@ class ExperimentalCanonicalQueryEngine:
         )
         self.profile = build_calendar_profile(settings_data, local_timezone=local_timezone)
         self.scope_key = build_summary_snapshot_scope_key(
+            group_name=scope.group_name,
             window_buckets=scope.window_buckets,
             afk_buckets=scope.afk_buckets,
             stopwatch_buckets=scope.stopwatch_buckets,

@@ -26,12 +26,14 @@ class DashboardAPI:
         settings,
         summary_snapshot_store,
         canonical_unit_store,
+        dashboard_availability_store,
         get_buckets: Callable[[], Dict[str, Dict[str, Any]]],
     ) -> None:
         self.db = db
         self.settings = settings
         self.summary_snapshot_store = summary_snapshot_store
         self.canonical_unit_store = canonical_unit_store
+        self.dashboard_availability_store = dashboard_availability_store
         self.get_buckets = get_buckets
 
     def summary_snapshot(
@@ -47,6 +49,7 @@ class DashboardAPI:
         filter_categories: List[List[str]],
         categories: Optional[List[Any]] = None,
         always_active_pattern: Optional[str] = None,
+        group_name: Optional[str] = None,
     ) -> SummarySnapshotResponse:
         return build_summary_snapshot_response(
             db=self.db,
@@ -63,6 +66,7 @@ class DashboardAPI:
             filter_categories=filter_categories,
             categories=categories,
             always_active_pattern=always_active_pattern,
+            group_name=group_name,
         )
 
     def checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
@@ -72,15 +76,19 @@ class DashboardAPI:
         self,
         *,
         requested_hosts: List[str],
+        requested_group_name: Optional[str] = None,
         range_start: Optional[datetime] = None,
         range_end: Optional[datetime] = None,
     ) -> DashboardScopeResponse:
         return build_dashboard_scope_response(
+            db=self.db,
             settings_data=self.settings.get(""),
             bucket_records=build_bucket_records(self.get_buckets()),
             requested_hosts=requested_hosts,
+            requested_group_name=requested_group_name,
             range_start=range_start,
             range_end=range_end,
+            availability_store=self.dashboard_availability_store,
         )
 
     def default_hosts(self) -> DashboardDefaultHostsResponse:

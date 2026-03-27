@@ -2,7 +2,7 @@ import functools
 import json
 import logging
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from socket import gethostname
 from typing import (
@@ -17,6 +17,11 @@ import iso8601
 from trustme_api.__about__ import __version__
 from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore
 from trustme_api.browser.dashboard.api_facade import DashboardAPI
+from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
+from trustme_api.browser.dashboard.domain_service import (
+    resolve_group_names_for_host,
+    resolve_logical_days_for_range,
+)
 from trustme_api.browser.dashboard.dto import (
     DashboardDefaultHostsResponse,
     DashboardDetailsResponse,
@@ -82,11 +87,13 @@ class ServerAPI:
         self.last_event = {}  # type: dict
         self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
         self.canonical_unit_store = SqliteCanonicalUnitStore(testing=testing)
+        self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
         self.dashboard = DashboardAPI(
             db=db,
             settings=self.settings,
             summary_snapshot_store=self.summary_snapshot_store,
             canonical_unit_store=self.canonical_unit_store,
+            dashboard_availability_store=self.dashboard_availability_store,
             get_buckets=self.get_buckets,
         )
 
@@ -163,6 +170,47 @@ class ServerAPI:
                 },
             )
         return snapshot_deleted + canonical_deleted
+
+    def _clear_dashboard_availability(self) -> None:
+        self.dashboard_availability_store.clear()
+
+    def _mark_dashboard_availability_for_write(
+        self,
+        bucket_id: str,
+        *,
+        write_start: datetime,
+        write_end: Optional[datetime] = None,
+        latest_event: Optional[Event] = None,
+    ) -> None:
+        bucket = self.get_buckets().get(bucket_id)
+        if not bucket:
+            return
+
+        host = bucket.get("hostname") or bucket.get("data", {}).get("hostname")
+        if not isinstance(host, str) or not host:
+            return
+
+        logical_days = resolve_logical_days_for_range(
+            settings_data=self.settings.get(""),
+            range_start=write_start,
+            range_end=write_end or (write_start + timedelta(seconds=1)),
+        )
+        if not logical_days:
+            return
+
+        group_names = resolve_group_names_for_host(
+            settings_data=self.settings.get(""),
+            bucket_records=build_bucket_records(self.get_buckets()),
+            host=host,
+        )
+        if not group_names:
+            return
+
+        for group_name in group_names:
+            self.dashboard_availability_store.mark_days_available(
+                group_name=group_name,
+                logical_days=logical_days,
+            )
 
     def get_info(self) -> Dict[str, Any]:
         """Get server info"""
@@ -359,6 +407,12 @@ class ServerAPI:
                 write_end=latest_written_end,
                 latest_event=latest_event,
             )
+            self._mark_dashboard_availability_for_write(
+                bucket_id,
+                write_start=earliest_timestamp,
+                write_end=latest_written_end,
+                latest_event=latest_event,
+            )
         return inserted
 
     @check_bucket_exists
@@ -379,6 +433,7 @@ class ServerAPI:
         deleted = self.db[bucket_id].delete(event_id)
         if deleted:
             self._invalidate_summary_snapshots_for_event_deletion(bucket_id, event)
+            self._clear_dashboard_availability()
         return deleted
 
     @check_bucket_exists
@@ -438,6 +493,12 @@ class ServerAPI:
                     )
                     self.last_event[bucket_id] = merged
                     self.db[bucket_id].replace_last(merged)
+                    self._mark_dashboard_availability_for_write(
+                        bucket_id,
+                        write_start=heartbeat.timestamp,
+                        write_end=heartbeat.timestamp + heartbeat.duration,
+                        latest_event=last_event,
+                    )
                     return merged
                 else:
                     logger.info(
@@ -461,6 +522,12 @@ class ServerAPI:
         self.db[bucket_id].insert(heartbeat)
         self.last_event[bucket_id] = heartbeat
         self._invalidate_summary_snapshots_for_retroactive_write(
+            bucket_id,
+            write_start=heartbeat.timestamp,
+            write_end=heartbeat.timestamp + heartbeat.duration,
+            latest_event=last_event,
+        )
+        self._mark_dashboard_availability_for_write(
             bucket_id,
             write_start=heartbeat.timestamp,
             write_end=heartbeat.timestamp + heartbeat.duration,
@@ -493,6 +560,7 @@ class ServerAPI:
         filter_categories: List[List[str]],
         categories: Optional[List[Any]] = None,
         always_active_pattern: Optional[str] = None,
+        group_name: Optional[str] = None,
     ) -> SummarySnapshotResponse:
         return self.dashboard.summary_snapshot(
             range_start=range_start,
@@ -505,6 +573,7 @@ class ServerAPI:
             filter_categories=filter_categories,
             categories=categories,
             always_active_pattern=always_active_pattern,
+            group_name=group_name,
         )
 
     def get_checkins(self, *, date_filter: Optional[str] = None) -> CheckinsResponse:
@@ -514,11 +583,13 @@ class ServerAPI:
         self,
         *,
         requested_hosts: List[str],
+        requested_group_name: Optional[str] = None,
         range_start: Optional[datetime] = None,
         range_end: Optional[datetime] = None,
     ) -> DashboardScopeResponse:
         return self.dashboard.resolve_scope(
             requested_hosts=requested_hosts,
+            requested_group_name=requested_group_name,
             range_start=range_start,
             range_end=range_end,
         )
@@ -590,4 +661,5 @@ class ServerAPI:
                     "deleted_canonical_units": canonical_deleted,
                 },
             )
+            self._clear_dashboard_availability()
         return normalized_value

@@ -74,15 +74,20 @@ class DashboardDetailsResponse(TypedDict):
 
 
 class DashboardScopeResponse(TypedDict):
+    group_name: str
     requested_hosts: List[str]
     resolved_hosts: List[str]
     window_buckets: List[str]
     afk_buckets: List[str]
     browser_buckets: List[str]
     stopwatch_buckets: List[str]
+    available_dates: List[str]
+    earliest_available_date: str
+    latest_available_date: str
 
 
 class DashboardDefaultHostsResponse(TypedDict):
+    group_name: str
     resolved_hosts: List[str]
 
 
@@ -290,12 +295,16 @@ def serialize_dashboard_scope_response(payload: Any) -> DashboardScopeResponse:
         payload = {}
 
     return {
+        "group_name": _as_string(payload.get("group_name")),
         "requested_hosts": _as_string_list(payload.get("requested_hosts")),
         "resolved_hosts": _as_string_list(payload.get("resolved_hosts")),
         "window_buckets": _as_string_list(payload.get("window_buckets")),
         "afk_buckets": _as_string_list(payload.get("afk_buckets")),
         "browser_buckets": _as_string_list(payload.get("browser_buckets")),
         "stopwatch_buckets": _as_string_list(payload.get("stopwatch_buckets")),
+        "available_dates": _as_string_list(payload.get("available_dates")),
+        "earliest_available_date": _as_string(payload.get("earliest_available_date")),
+        "latest_available_date": _as_string(payload.get("latest_available_date")),
     }
 
 
@@ -304,6 +313,7 @@ def serialize_dashboard_default_hosts_response(payload: Any) -> DashboardDefault
         payload = {}
 
     return {
+        "group_name": _as_string(payload.get("group_name")),
         "resolved_hosts": _as_string_list(payload.get("resolved_hosts")),
     }
 

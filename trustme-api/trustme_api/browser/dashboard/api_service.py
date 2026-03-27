@@ -5,7 +5,7 @@ from trustme_api.browser.dashboard.details import build_dashboard_details
 from trustme_api.browser.dashboard.domain_service import (
     build_ad_hoc_summary_scope,
     build_settings_backed_summary_scope,
-    resolve_default_dashboard_hosts,
+    resolve_default_dashboard_scope,
     resolve_dashboard_scope as resolve_dashboard_scope_request,
 )
 from trustme_api.browser.dashboard.dto import (
@@ -37,6 +37,7 @@ def build_summary_snapshot_response(
     filter_categories: Sequence[Sequence[str]],
     categories: Optional[Sequence[Any]] = None,
     always_active_pattern: Optional[str] = None,
+    group_name: Optional[str] = None,
 ) -> SummarySnapshotResponse:
     if categories is None and always_active_pattern is None:
         scope = build_settings_backed_summary_scope(
@@ -46,6 +47,7 @@ def build_summary_snapshot_response(
             stopwatch_buckets=stopwatch_buckets,
             filter_afk=filter_afk,
             filter_categories=filter_categories,
+            group_name=group_name or "dashboard",
         )
     else:
         scope = build_ad_hoc_summary_scope(
@@ -56,6 +58,7 @@ def build_summary_snapshot_response(
             categories=categories or [],
             filter_categories=filter_categories,
             always_active_pattern=always_active_pattern or "",
+            group_name=group_name or "ad-hoc",
         )
 
     return serialize_summary_snapshot_response(
@@ -78,8 +81,11 @@ def build_dashboard_scope_response(
     settings_data: Dict[str, Any],
     bucket_records: Sequence[Dict[str, Any]],
     requested_hosts: Sequence[str],
+    requested_group_name: Optional[str] = None,
     range_start: Optional[datetime] = None,
     range_end: Optional[datetime] = None,
+    db=None,
+    availability_store=None,
 ) -> DashboardScopeResponse:
     overlap_start_ms = range_start.timestamp() * 1000 if range_start else None
     overlap_end_ms = range_end.timestamp() * 1000 if range_end else None
@@ -88,8 +94,11 @@ def build_dashboard_scope_response(
             settings_data=settings_data,
             bucket_records=bucket_records,
             requested_hosts=requested_hosts,
+            requested_group_name=requested_group_name,
             overlap_start_ms=overlap_start_ms,
             overlap_end_ms=overlap_end_ms,
+            db=db,
+            availability_store=availability_store,
         )
     )
 
@@ -99,12 +108,14 @@ def build_default_dashboard_hosts_response(
     settings_data: Dict[str, Any],
     bucket_records: Sequence[Dict[str, Any]],
 ) -> DashboardDefaultHostsResponse:
+    default_scope = resolve_default_dashboard_scope(
+        settings_data=settings_data,
+        bucket_records=bucket_records,
+    )
     return serialize_dashboard_default_hosts_response(
         {
-            "resolved_hosts": resolve_default_dashboard_hosts(
-                settings_data=settings_data,
-                bucket_records=bucket_records,
-            )
+            "group_name": default_scope.group_name,
+            "resolved_hosts": default_scope.resolved_hosts,
         }
     )
 

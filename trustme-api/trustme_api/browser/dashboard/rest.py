@@ -30,6 +30,7 @@ summary_snapshot_query = dashboard_api.model(
         "categories": fields.Raw(required=False),
         "filter_categories": fields.Raw(required=False),
         "always_active_pattern": fields.String(required=False),
+        "group_name": fields.String(required=False),
     },
 )
 
@@ -188,6 +189,11 @@ class SummarySnapshotResource(Resource):
                 "always_active_pattern",
                 error_type="InvalidSummarySnapshotAlwaysActivePattern",
             ),
+            group_name=_parse_optional_string(
+                data,
+                "group_name",
+                error_type="InvalidSummarySnapshotGroupName",
+            ),
         )
         return jsonify(result)
 
@@ -206,6 +212,12 @@ class DashboardScopeResource(Resource):
                 "hosts",
                 error_type="InvalidDashboardScopeHosts",
                 field_name="hosts",
+            ),
+            requested_group_name=_parse_optional_string(
+                data,
+                "group_name",
+                error_type="InvalidDashboardScopeGroupName",
+                field_name="group_name",
             ),
             range_start=range_start,
             range_end=range_end,
