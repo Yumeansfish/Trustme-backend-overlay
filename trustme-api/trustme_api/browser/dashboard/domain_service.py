@@ -114,7 +114,7 @@ def build_dashboard_summary_scopes(
     for group_name, group_hosts in effective_mappings.items():
         resolved_hosts = list(group_hosts)
         if overlap_start_ms is not None and overlap_end_ms is not None:
-            overlapping_hosts = [
+            resolved_hosts = [
                 host
                 for host in group_hosts
                 if _host_has_bucket_overlap(
@@ -124,8 +124,8 @@ def build_dashboard_summary_scopes(
                     overlap_end_ms,
                 )
             ]
-            if overlapping_hosts:
-                resolved_hosts = overlapping_hosts
+            if not resolved_hosts:
+                continue
 
         window_buckets = _select_window_buckets(bucket_records, resolved_hosts)
         afk_buckets = _select_buckets_by_type(bucket_records, resolved_hosts, "afkstatus")
@@ -176,7 +176,7 @@ def resolve_dashboard_scope(
         and overlap_start_ms is not None
         and overlap_end_ms is not None
     ):
-        overlapping_hosts = [
+        resolved_hosts = [
             host
             for host in resolved_hosts
             if _host_has_bucket_overlap(
@@ -186,8 +186,6 @@ def resolve_dashboard_scope(
                 overlap_end_ms,
             )
         ]
-        if overlapping_hosts:
-            resolved_hosts = overlapping_hosts
 
     return DashboardResolvedScope(
         requested_hosts=normalized_requested_hosts,
