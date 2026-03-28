@@ -191,7 +191,6 @@ def _load_default_classes() -> List[Dict[str, Any]]:
 
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
-    "startOfDay": "09:00",
     "startOfWeek": "Monday",
     "durationDefault": 24 * 60 * 60,
     "useColorFallback": False,
@@ -240,19 +239,6 @@ def _normalize_nonempty_string(value: Any, *, default: str, strict: bool) -> str
             return stripped
     if strict:
         raise ValueError("Expected a non-empty string value")
-    return default
-
-
-def _normalize_start_of_day(value: Any, *, default: str, strict: bool) -> str:
-    if isinstance(value, str):
-        match = re.fullmatch(r"\s*(\d{1,2}):(\d{2})\s*", value)
-        if match:
-            hours = int(match.group(1))
-            minutes = int(match.group(2))
-            if 0 <= hours <= 23 and 0 <= minutes <= 59:
-                return f"{hours:02d}:{minutes:02d}"
-    if strict:
-        raise ValueError("Expected startOfDay in HH:MM format")
     return default
 
 
@@ -440,9 +426,6 @@ def _normalize_class_entry(
 
 
 SETTING_NORMALIZERS: Dict[str, Callable[[Any, Any, bool], Any]] = {
-    "startOfDay": lambda value, default, strict: _normalize_start_of_day(
-        value, default=default, strict=strict
-    ),
     "startOfWeek": lambda value, default, strict: _normalize_start_of_week(
         value, default=default, strict=strict
     ),
@@ -500,6 +483,9 @@ def normalize_setting_value(key: str, value: Any, *, strict: bool) -> Any:
 def normalize_settings_data(raw_data: Dict[str, Any] | None) -> Tuple[Dict[str, Any], bool]:
     source = deepcopy(raw_data or {})
     changed = _apply_setting_aliases(source)
+    if "startOfDay" in source:
+        source.pop("startOfDay", None)
+        changed = True
 
     normalized: Dict[str, Any] = {}
     normalized, normalized_changed = _normalize_known_settings(source)

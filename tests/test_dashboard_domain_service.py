@@ -130,7 +130,7 @@ class DashboardDomainServiceTest(unittest.TestCase):
                 }
             )
             scope = resolve_dashboard_scope(
-                settings_data={"startOfDay": "00:00", "deviceMappings": {}},
+                settings_data={"deviceMappings": {}},
                 bucket_records=self.bucket_records,
                 requested_hosts=[],
                 requested_group_name="My macbook",

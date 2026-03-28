@@ -60,7 +60,7 @@ class DashboardSummarySnapshotTest(unittest.TestCase):
             range_end=datetime(2021, 1, 1, tzinfo=timezone.utc),
             category_periods=["2020-01-01T00:00:00+00:00/2021-01-01T00:00:00+00:00"],
             scope=scope,
-            calendar_settings={"startOfDay": "00:00", "startOfWeek": "Monday", "classes": []},
+            calendar_settings={"startOfWeek": "Monday", "classes": []},
             canonical_unit_store=object(),
         )
 

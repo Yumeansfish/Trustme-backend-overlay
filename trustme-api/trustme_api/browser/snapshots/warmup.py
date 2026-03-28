@@ -2,7 +2,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, time as daytime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional, Sequence
 from zoneinfo import ZoneInfo
@@ -126,11 +126,9 @@ def build_dashboard_summary_warmup_jobs(
     now_local = _normalize_now(now, tz)
     from trustme_api.browser.settings.schema import normalize_settings_data
     settings_data, _ = normalize_settings_data(settings_data)
-    start_of_day = str(settings_data["startOfDay"])
     start_of_week = str(settings_data["startOfWeek"])
     periods = _build_current_summary_warmup_periods(
         now_local=now_local,
-        start_of_day=start_of_day,
         start_of_week=start_of_week,
     )
 
@@ -198,27 +196,14 @@ def _normalize_now(now: Optional[datetime], local_timezone) -> datetime:
     return now.astimezone(local_timezone)
 
 
-def _parse_start_of_day(value: str) -> tuple[int, int]:
-    parts = value.split(":")
-    hours = int(parts[0]) if parts and parts[0] else 0
-    minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
-    return hours, minutes
+def _latest_logical_date(now_local: datetime) -> date:
+    return now_local.date()
 
 
-def _offset_duration(start_of_day: str) -> timedelta:
-    hours, minutes = _parse_start_of_day(start_of_day)
-    return timedelta(hours=hours, minutes=minutes)
-
-
-def _latest_logical_date(now_local: datetime, start_of_day: str) -> date:
-    return (now_local - _offset_duration(start_of_day)).date()
-
-
-def _day_start(latest_date: date, now_local: datetime, start_of_day: str) -> datetime:
-    hours, minutes = _parse_start_of_day(start_of_day)
+def _day_start(logical_date: date, now_local: datetime) -> datetime:
     return datetime.combine(
-        latest_date,
-        daytime(hour=hours, minute=minutes),
+        logical_date,
+        datetime.min.time(),
         tzinfo=now_local.tzinfo,
     )
 
@@ -226,10 +211,9 @@ def _day_start(latest_date: date, now_local: datetime, start_of_day: str) -> dat
 def _build_current_summary_warmup_periods(
     *,
     now_local: datetime,
-    start_of_day: str,
     start_of_week: str,
 ) -> List[SummaryWarmupPeriod]:
-    anchor = _day_start(_latest_logical_date(now_local, start_of_day), now_local, start_of_day)
+    anchor = _day_start(_latest_logical_date(now_local), now_local)
     periods: List[SummaryWarmupPeriod] = []
 
     for period_name in SUMMARY_WARMUP_PERIOD_ORDER:

@@ -49,7 +49,6 @@ from trustme_api.transform import heartbeat_merge
 logger = logging.getLogger(__name__)
 
 SUMMARY_SNAPSHOT_INVALIDATION_SETTINGS = {
-    "startOfDay",
     "startOfWeek",
     "classes",
     "deviceMappings",

@@ -1,7 +1,7 @@
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import date, datetime, time as daytime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tuple
 from zoneinfo import ZoneInfo
@@ -46,15 +46,12 @@ LOCALTIME_PATH = Path("/etc/localtime")
 class CalendarProfile:
     timezone_name: str
     timezone_obj: Any
-    start_of_day: str
     start_of_week: str
-    offset: timedelta
 
     @property
     def key(self) -> str:
         payload = {
             "timezone": self.timezone_name,
-            "start_of_day": self.start_of_day,
             "start_of_week": self.start_of_week,
         }
         digest = hashlib.sha256(
@@ -204,13 +201,10 @@ def build_calendar_profile(
     normalized, _ = normalize_settings_data(settings_data)
     timezone_obj = local_timezone or _resolve_local_timezone() or timezone.utc
     timezone_name = getattr(timezone_obj, "key", None) or str(timezone_obj)
-    start_of_day = str(normalized["startOfDay"])
     return CalendarProfile(
         timezone_name=timezone_name,
         timezone_obj=timezone_obj,
-        start_of_day=start_of_day,
         start_of_week=str(normalized["startOfWeek"]),
-        offset=_offset_duration(start_of_day),
     )
 
 
@@ -775,12 +769,7 @@ def next_hour_start(value: datetime) -> datetime:
 def day_start_for(value: datetime, profile: CalendarProfile) -> datetime:
     value = profile.normalize(value)
     logical = logical_date(value, profile)
-    hours, minutes = _parse_start_of_day(profile.start_of_day)
-    return datetime.combine(
-        logical,
-        daytime(hour=hours, minute=minutes),
-        tzinfo=profile.timezone_obj,
-    )
+    return datetime.combine(logical, datetime.min.time(), tzinfo=profile.timezone_obj)
 
 
 def next_day_start_for(value: datetime, profile: CalendarProfile) -> datetime:
@@ -799,10 +788,9 @@ def week_start_for(value: datetime, profile: CalendarProfile) -> datetime:
 def month_start_for(value: datetime, profile: CalendarProfile) -> datetime:
     value = profile.normalize(value)
     logical = logical_date(value, profile)
-    hours, minutes = _parse_start_of_day(profile.start_of_day)
     return datetime.combine(
         logical.replace(day=1),
-        daytime(hour=hours, minute=minutes),
+        datetime.min.time(),
         tzinfo=profile.timezone_obj,
     )
 
@@ -815,16 +803,15 @@ def next_month_start_for(value: datetime, profile: CalendarProfile) -> datetime:
 def year_start_for(value: datetime, profile: CalendarProfile) -> datetime:
     value = profile.normalize(value)
     logical = logical_date(value, profile)
-    hours, minutes = _parse_start_of_day(profile.start_of_day)
     return datetime.combine(
         date(logical.year, 1, 1),
-        daytime(hour=hours, minute=minutes),
+        datetime.min.time(),
         tzinfo=profile.timezone_obj,
     )
 
 
 def logical_date(value: datetime, profile: CalendarProfile) -> date:
-    return (profile.normalize(value) - profile.offset).date()
+    return profile.normalize(value).date()
 
 
 def _add_months(value: datetime, count: int) -> datetime:
@@ -832,15 +819,3 @@ def _add_months(value: datetime, count: int) -> datetime:
     year = value.year + month_index // 12
     month = month_index % 12 + 1
     return value.replace(year=year, month=month)
-
-
-def _parse_start_of_day(value: str) -> Tuple[int, int]:
-    parts = value.split(":")
-    hours = int(parts[0]) if parts and parts[0] else 0
-    minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
-    return hours, minutes
-
-
-def _offset_duration(start_of_day: str) -> timedelta:
-    hours, minutes = _parse_start_of_day(start_of_day)
-    return timedelta(hours=hours, minutes=minutes)

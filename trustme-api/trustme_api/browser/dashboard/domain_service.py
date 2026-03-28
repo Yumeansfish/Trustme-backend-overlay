@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime, time as daytime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 from zoneinfo import ZoneInfo
@@ -331,15 +331,13 @@ def resolve_logical_days_for_range(
     range_start: datetime,
     range_end: datetime,
 ) -> List[str]:
-    normalized_settings, _ = normalize_settings_data(settings_data)
     if range_end <= range_start:
         return []
 
     local_timezone = _resolve_local_timezone()
-    start_of_day = str(normalized_settings["startOfDay"])
-    start_day = _logical_date(range_start, start_of_day, local_timezone)
+    start_day = _logical_date(range_start, local_timezone)
     end_reference = range_end - timedelta(milliseconds=1)
-    end_day = _logical_date(end_reference, start_of_day, local_timezone)
+    end_day = _logical_date(end_reference, local_timezone)
 
     days: List[str] = []
     cursor = start_day
@@ -455,14 +453,12 @@ def _resolve_availability_day_bounds(
     if not starts or not ends:
         return None
 
-    normalized_settings, _ = normalize_settings_data(settings_data)
-    start_of_day = str(normalized_settings["startOfDay"])
     local_timezone = _resolve_local_timezone()
     start_dt = datetime.fromtimestamp(min(starts) / 1000, tz=timezone.utc)
     end_dt = datetime.fromtimestamp(max(ends) / 1000, tz=timezone.utc) - timedelta(milliseconds=1)
     return (
-        _logical_date(start_dt, start_of_day, local_timezone).isoformat(),
-        _logical_date(end_dt, start_of_day, local_timezone).isoformat(),
+        _logical_date(start_dt, local_timezone).isoformat(),
+        _logical_date(end_dt, local_timezone).isoformat(),
     )
 
 
@@ -478,17 +474,13 @@ def _rebuild_dashboard_availability_days(
     db,
     availability_store: DashboardAvailabilityStore,
 ) -> List[str]:
-    normalized_settings, _ = normalize_settings_data(settings_data)
-    start_of_day = str(normalized_settings["startOfDay"])
     local_timezone = _resolve_local_timezone()
     range_start, _ = _logical_day_bounds(
         date.fromisoformat(start_day),
-        start_of_day=start_of_day,
         local_timezone=local_timezone,
     )
     _, range_end = _logical_day_bounds(
         date.fromisoformat(end_day),
-        start_of_day=start_of_day,
         local_timezone=local_timezone,
     )
 
@@ -497,7 +489,6 @@ def _rebuild_dashboard_availability_days(
         window_buckets,
         range_start=range_start,
         range_end=range_end,
-        start_of_day=start_of_day,
         local_timezone=local_timezone,
     )
     afk_days = _collect_bucket_logical_days(
@@ -505,7 +496,6 @@ def _rebuild_dashboard_availability_days(
         afk_buckets,
         range_start=range_start,
         range_end=range_end,
-        start_of_day=start_of_day,
         local_timezone=local_timezone,
     )
     available_days = sorted(window_days & afk_days)
@@ -526,7 +516,6 @@ def _collect_bucket_logical_days(
     range_start: datetime,
     range_end: datetime,
     *,
-    start_of_day: str,
     local_timezone,
 ) -> set[str]:
     logical_days: set[str] = set()
@@ -544,7 +533,6 @@ def _collect_bucket_logical_days(
                     event,
                     range_start=range_start,
                     range_end=range_end,
-                    start_of_day=start_of_day,
                     local_timezone=local_timezone,
                 )
             )
@@ -557,7 +545,6 @@ def _event_logical_days(
     *,
     range_start: datetime,
     range_end: datetime,
-    start_of_day: str,
     local_timezone,
 ) -> List[str]:
     timestamp = getattr(event, "timestamp", None)
@@ -581,10 +568,9 @@ def _event_logical_days(
     if event_end <= event_start:
         event_end = min(range_end, event_start + timedelta(microseconds=1))
 
-    start_day = _logical_date(event_start, start_of_day, local_timezone)
+    start_day = _logical_date(event_start, local_timezone)
     end_day = _logical_date(
         event_end - timedelta(microseconds=1),
-        start_of_day,
         local_timezone,
     )
 
@@ -599,22 +585,16 @@ def _event_logical_days(
 def _logical_day_bounds(
     logical_day: date,
     *,
-    start_of_day: str,
     local_timezone,
 ) -> tuple[datetime, datetime]:
-    hours, minutes = _parse_start_of_day(start_of_day)
-    start = datetime.combine(
-        logical_day,
-        daytime(hour=hours, minute=minutes),
-        tzinfo=local_timezone,
-    )
+    start = datetime.combine(logical_day, datetime.min.time(), tzinfo=local_timezone)
     return start, start + timedelta(days=1)
 
 
-def _logical_date(value: datetime, start_of_day: str, local_timezone) -> date:
+def _logical_date(value: datetime, local_timezone) -> date:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
-    return (value.astimezone(local_timezone) - _offset_duration(start_of_day)).date()
+    return value.astimezone(local_timezone).date()
 
 
 def _resolve_local_timezone():
@@ -630,19 +610,6 @@ def _resolve_local_timezone():
         pass
 
     return datetime.now().astimezone().tzinfo or timezone.utc
-
-
-def _parse_start_of_day(value: str) -> tuple[int, int]:
-    parts = value.split(":")
-    hours = int(parts[0]) if parts and parts[0] else 0
-    minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
-    return hours, minutes
-
-
-def _offset_duration(start_of_day: str) -> timedelta:
-    hours, minutes = _parse_start_of_day(start_of_day)
-    return timedelta(hours=hours, minutes=minutes)
-
 
 def _dedupe_strings(values: Sequence[str]) -> List[str]:
     seen = set()
