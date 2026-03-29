@@ -144,6 +144,62 @@ class DashboardDomainServiceTest(unittest.TestCase):
         self.assertEqual(scope.earliest_available_date, "2025-05-01")
         self.assertEqual(scope.latest_available_date, "2025-05-01")
 
+    def test_resolve_dashboard_scope_keeps_group_availability_when_overlap_filters_hosts(self):
+        class FakeBucket:
+            def __init__(self, logical_days):
+                self.logical_days = set(logical_days)
+
+            def get(self, limit=-1, starttime=None, endtime=None):
+                events = []
+                for logical_day in sorted(self.logical_days):
+                    events.append(
+                        type(
+                            "FakeEvent",
+                            (),
+                            {
+                                "timestamp": datetime.fromisoformat(logical_day).replace(
+                                    tzinfo=timezone.utc
+                                ),
+                                "duration": timedelta(minutes=1),
+                            },
+                        )()
+                    )
+                return events
+
+        class FakeDB(dict):
+            def __getitem__(self, key):
+                return dict.__getitem__(self, key)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            availability_store = DashboardAvailabilityStore(
+                testing=True,
+                path=Path(tmpdir) / "availability.sqlite",
+            )
+            db = FakeDB(
+                {
+                    "aw-watcher-window_alpha.local": FakeBucket({"2025-05-01"}),
+                    "aw-watcher-afk_alpha.local": FakeBucket({"2025-05-01"}),
+                    "aw-watcher-window_beta.local": FakeBucket({"2025-06-01"}),
+                    "aw-watcher-afk_beta.local": FakeBucket({"2025-06-01"}),
+                }
+            )
+            scope = resolve_dashboard_scope(
+                settings_data={"deviceMappings": {}},
+                bucket_records=self.bucket_records,
+                requested_hosts=[],
+                requested_group_name="My macbook",
+                overlap_start_ms=datetime(2025, 5, 1, tzinfo=timezone.utc).timestamp() * 1000,
+                overlap_end_ms=datetime(2025, 5, 2, tzinfo=timezone.utc).timestamp() * 1000,
+                db=db,
+                availability_store=availability_store,
+            )
+
+        self.assertEqual(scope.group_name, "My macbook")
+        self.assertEqual(scope.resolved_hosts, ["alpha.local"])
+        self.assertEqual(scope.available_dates, ["2025-05-01", "2025-06-01"])
+        self.assertEqual(scope.earliest_available_date, "2025-05-01")
+        self.assertEqual(scope.latest_available_date, "2025-06-01")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -185,7 +185,8 @@ def resolve_dashboard_scope(
     )
     group_name = _resolve_requested_group_name(requested_group_name, effective_mappings)
     if group_name:
-        resolved_hosts = list(effective_mappings.get(group_name, []))
+        group_hosts = list(effective_mappings.get(group_name, []))
+        resolved_hosts = list(group_hosts)
         if not normalized_requested_hosts:
             normalized_requested_hosts = list(resolved_hosts)
     else:
@@ -193,11 +194,14 @@ def resolve_dashboard_scope(
             normalized_requested_hosts,
             effective_mappings,
         )
-        resolved_hosts = list(expanded_hosts)
-        group_name = _infer_group_name_from_hosts(resolved_hosts, effective_mappings)
+        group_hosts = list(expanded_hosts)
+        resolved_hosts = list(group_hosts)
+        group_name = _infer_group_name_from_hosts(group_hosts, effective_mappings)
 
     if not group_name:
         group_name = _normalize_group_name(requested_group_name) or AD_HOC_DASHBOARD_GROUP_NAME
+
+    availability_hosts = list(group_hosts)
 
     if (
         resolved_hosts
@@ -219,14 +223,18 @@ def resolve_dashboard_scope(
     afk_buckets = _select_buckets_by_type(bucket_records, resolved_hosts, "afkstatus")
     browser_buckets = _select_browser_buckets(bucket_records, resolved_hosts)
     stopwatch_buckets = _select_stopwatch_buckets(bucket_records, resolved_hosts)
+    availability_window_buckets = _select_window_buckets(bucket_records, availability_hosts)
+    availability_afk_buckets = _select_buckets_by_type(
+        bucket_records, availability_hosts, "afkstatus"
+    )
     available_dates, earliest_available_date, latest_available_date = (
         _resolve_dashboard_availability(
             settings_data=settings_data,
             bucket_records=bucket_records,
             group_name=group_name,
-            resolved_hosts=resolved_hosts,
-            window_buckets=window_buckets,
-            afk_buckets=afk_buckets,
+            resolved_hosts=availability_hosts,
+            window_buckets=availability_window_buckets,
+            afk_buckets=availability_afk_buckets,
             db=db,
             availability_store=availability_store,
         )
