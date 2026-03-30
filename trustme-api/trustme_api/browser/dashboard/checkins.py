@@ -45,10 +45,17 @@ class CheckinPair:
 
 
 def resolve_checkins_data_dir() -> Path:
-    bundled_dir = Path(__file__).resolve().parents[3] / "aw_server" / "checkins_data"
+    module_path = Path(__file__).resolve()
+    workspace_dir = Path.home() / "Desktop" / "trust-me" / "backend" / "trustme-api" / "aw_server" / "checkins_data"
+    bundled_dir = module_path.parents[3] / "aw_server" / "checkins_data"
+    packaged_framework_dir = module_path.parents[1] / "checkins_data"
+    packaged_resources_dir = module_path.parents[2] / "Resources" / "aw_server" / "checkins_data"
     candidates = [
         os.getenv("TRUSTME_CHECKINS_DIR"),
+        workspace_dir,
         Path(get_data_dir("aw-server")) / "checkins",
+        packaged_framework_dir,
+        packaged_resources_dir,
         bundled_dir,
     ]
     for candidate in candidates:
