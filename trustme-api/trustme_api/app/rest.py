@@ -16,6 +16,7 @@ from flask import (
 from flask_restx import Api, Resource, fields
 from trustme_api.api import ServerAPI
 from trustme_api.browser.dashboard.rest import dashboard_api
+from trustme_api.browser.surveys.rest import surveys_api
 from trustme_api.exceptions import BadRequest, Unauthorized
 from trustme_api.query.exceptions import QueryException
 from trustme_api.shared import schema
@@ -58,6 +59,7 @@ api = Api(
     description="Local API browser for trust-me.",
 )
 api.add_namespace(dashboard_api)
+api.add_namespace(surveys_api)
 
 
 def _sanitize_log_value(value) -> str:

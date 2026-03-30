@@ -329,6 +329,7 @@ install_main_dependencies() {
     case "$module" in
       aw-qt)
         poetry install --with pyqt
+        "$BUILD_PYTHON_BIN" -m pip install "PyQt6==6.5.3" "PyQt6-Qt6==6.5.3"
         ;;
       *)
         poetry install --only main

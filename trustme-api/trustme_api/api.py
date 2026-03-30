@@ -32,6 +32,8 @@ from trustme_api.browser.dashboard.dto import (
 from trustme_api.browser.dashboard.public_names import bucket_display_name
 from trustme_api.browser.settings.schema import canonicalize_setting_key
 from trustme_api.browser.settings.service import Settings
+from trustme_api.browser.surveys.answer_store import SurveyAnswerStore
+from trustme_api.browser.surveys.api_facade import SurveyAPI
 from trustme_api.browser.snapshots.invalidation import (
     invalidate_canonical_units_for_bucket_time_range,
     invalidate_canonical_units_for_settings,
@@ -87,6 +89,7 @@ class ServerAPI:
         self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
         self.canonical_unit_store = SqliteCanonicalUnitStore(testing=testing)
         self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
+        self.survey_answer_store = SurveyAnswerStore(testing=testing)
         self.dashboard = DashboardAPI(
             db=db,
             settings=self.settings,
@@ -95,6 +98,7 @@ class ServerAPI:
             dashboard_availability_store=self.dashboard_availability_store,
             get_buckets=self.get_buckets,
         )
+        self.surveys = SurveyAPI(answer_store=self.survey_answer_store)
 
     def _get_latest_bucket_event(self, bucket_id: str) -> Optional[Event]:
         if bucket_id in self.last_event:

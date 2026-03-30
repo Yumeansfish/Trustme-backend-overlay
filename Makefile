@@ -21,7 +21,7 @@ FRONTEND_DIR ?= $(DEFAULT_FRONTEND_DIR)
 BUILD_ROOT ?= $(DEFAULT_BUILD_ROOT)
 APP_PATH ?= /Applications/trust-me.app
 
-.PHONY: release build-bundle build-release render-site sync-app
+.PHONY: release build-bundle build-release render-site sync-app sync-survey-videos
 
 release: build-release
 
@@ -45,3 +45,9 @@ sync-app: build-bundle
 	./scripts/release/sync_browser_line_into_app.sh \
 		"$(BUILD_ROOT)/dist/browser-line" \
 		"$(APP_PATH)"
+
+sync-survey-videos:
+	python3 ./scripts/sync_survey_videos.py \
+		--remote-host "$${REMOTE_HOST:-uc-workstation}" \
+		--remote-dir "$${REMOTE_DIR:-~/highlights}" \
+		$${LOCAL_DIR:+--local-dir "$$LOCAL_DIR"}

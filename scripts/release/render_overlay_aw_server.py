@@ -24,6 +24,7 @@ DIR_MAP = {
     "trustme-api/trustme_api/browser/snapshots": "aw_server/snapshots",
     "trustme-api/trustme_api/browser/settings": "aw_server/settings",
     "trustme-api/trustme_api/browser/canonical": "aw_server/canonical",
+    "trustme-api/trustme_api/browser/surveys": "aw_server/surveys",
     "trustme-api/aw_server/checkins_data": "aw_server/checkins_data",
 }
 
@@ -53,6 +54,7 @@ SPEC_NEEDLE = '        (os.path.join(aw_core_path, "schemas"), "aw_core/schemas"
 SPEC_INSERT = (
     '        (os.path.join(aw_core_path, "schemas"), "aw_core/schemas"),\n'
     '        ("aw_server/settings/settings_seed_knowledgebase.v1.json", "aw_server/settings"),\n'
+    '        ("aw_server/surveys/fixed_questionnaire.v1.json", "aw_server/surveys"),\n'
     '        ("aw_server/checkins_data", "aw_server/checkins_data"),\n'
 )
 
