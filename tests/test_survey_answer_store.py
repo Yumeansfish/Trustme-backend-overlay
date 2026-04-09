@@ -1,10 +1,15 @@
 from pathlib import Path
 
 from trustme_api.browser.surveys.answer_store import SurveyAnswerStore
+from trustme_api.browser.surveys.repository import SurveyAnswerRepository
+
+
+def test_answer_store_shim_reexports_repository():
+    assert SurveyAnswerStore is SurveyAnswerRepository
 
 
 def test_mark_completed_round_trips_submission(tmp_path: Path) -> None:
-    store = SurveyAnswerStore(testing=True, path=tmp_path / "survey-answers.json")
+    store = SurveyAnswerRepository(testing=True, path=tmp_path / "survey-answers.json")
 
     submission = store.mark_completed(
         survey_id="survey-2025-06-17",

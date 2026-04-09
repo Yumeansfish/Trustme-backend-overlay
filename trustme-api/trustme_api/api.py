@@ -32,7 +32,7 @@ from trustme_api.browser.dashboard.dto import (
 from trustme_api.browser.dashboard.public_names import bucket_display_name
 from trustme_api.browser.settings.schema import canonicalize_setting_key
 from trustme_api.browser.settings.service import Settings
-from trustme_api.browser.surveys.answer_store import SurveyAnswerStore
+from trustme_api.browser.surveys.repository import SurveyAnswerRepository
 from trustme_api.browser.surveys.api_facade import SurveyAPI
 from trustme_api.browser.snapshots.invalidation_service import (
     invalidate_canonical_units_for_bucket_time_range,
@@ -89,7 +89,7 @@ class ServerAPI:
         self.summary_snapshot_store = SummarySnapshotRepository(testing=testing)
         self.canonical_unit_store = SqliteCanonicalUnitRepository(testing=testing)
         self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
-        self.survey_answer_store = SurveyAnswerStore(testing=testing)
+        self.survey_answer_store = SurveyAnswerRepository(testing=testing)
         self.dashboard = DashboardAPI(
             db=db,
             settings=self.settings,
