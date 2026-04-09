@@ -1,6 +1,4 @@
 import logging
-import threading
-import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -12,13 +10,16 @@ from trustme_api.browser.dashboard.domain_service import (
     build_bucket_records,
     build_dashboard_summary_scopes,
 )
+from trustme_api.browser.snapshots.scheduler import (
+    SUMMARY_WARMUP_INTERVAL_SECONDS,
+    start_dashboard_summary_warmup,
+)
 from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
 
 
 logger = logging.getLogger(__name__)
 
 SUMMARY_WARMUP_PERIOD_ORDER = ("year", "month", "week")
-SUMMARY_WARMUP_INTERVAL_SECONDS = 60
 LOCALTIME_PATH = Path("/etc/localtime")
 
 
@@ -67,18 +68,6 @@ class SummaryWarmupJob:
     @property
     def always_active_pattern(self) -> str:
         return self.scope.always_active_pattern
-
-
-def start_dashboard_summary_warmup(server_api) -> threading.Thread:
-    worker = threading.Thread(
-        target=_warmup_loop,
-        args=(server_api,),
-        name="dashboard-summary-warmup",
-        daemon=True,
-    )
-    worker.start()
-    return worker
-
 
 def warm_dashboard_summary_snapshots(
     server_api,
@@ -155,23 +144,6 @@ def build_dashboard_summary_warmup_jobs(
             )
 
     return jobs
-
-
-def _warmup_loop(server_api) -> None:
-    while True:
-        started_at = time.monotonic()
-        try:
-            job_count = warm_dashboard_summary_snapshots(server_api)
-            duration = time.monotonic() - started_at
-            logger.info(
-                "Dashboard summary warmup completed",
-                extra={"jobs": job_count, "duration_seconds": round(duration, 3)},
-            )
-        except Exception:
-            logger.exception("Dashboard summary warmup failed")
-
-        time.sleep(SUMMARY_WARMUP_INTERVAL_SECONDS)
-
 
 def _resolve_local_timezone():
     try:

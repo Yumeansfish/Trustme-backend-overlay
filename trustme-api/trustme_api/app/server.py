@@ -17,7 +17,7 @@ from trustme_api.api import ServerAPI
 from trustme_api.app import rest
 from trustme_api.app.custom_static import get_custom_static_blueprint
 from trustme_api.app.log import FlaskLogHandler
-from trustme_api.browser.snapshots.warmup import start_dashboard_summary_warmup
+from trustme_api.browser.snapshots.scheduler import start_dashboard_summary_warmup
 from trustme_api.storage import Datastore, get_storage_methods
 
 logger = logging.getLogger(__name__)

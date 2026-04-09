@@ -6,6 +6,7 @@ __all__ = [
     "repository",
     "response",
     "response_mapper",
+    "scheduler",
     "scope",
     "segments",
     "store",
