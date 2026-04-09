@@ -20,11 +20,11 @@ fi
 source "${VENV_DIR}/bin/activate"
 
 if [ ! -f "${BOOTSTRAP_STAMP}" ] || [ "${FORCE_BOOTSTRAP:-0}" = "1" ]; then
-  # Keep this lane focused on the browser backend path while still exercising
-  # the legacy aw_server compatibility imports and contract generator.
+  # Keep this lane focused on the dashboard/browser overlay while still
+  # exercising the repo-level package boundary and contract generator.
   python -m pip install --upgrade pip >/dev/null
   python -m pip install \
-    -e "${ROOT_DIR}/trustme-api" \
+    -e "${ROOT_DIR}" \
     pytest \
     pytest-benchmark >/dev/null
   date -u +"%Y-%m-%dT%H:%M:%SZ" > "${BOOTSTRAP_STAMP}"
@@ -34,14 +34,16 @@ cd "${ROOT_DIR}"
 
 python -m pytest \
   -o addopts='' \
-  trustme-api/tests/test_dashboard_details.py \
-  trustme-api/tests/test_dashboard_domain_service.py \
-  trustme-api/tests/test_dashboard_api_facade.py \
-  trustme-api/tests/test_dashboard_dto.py \
-  trustme-api/tests/test_dashboard_contract_codegen.py \
-  trustme-api/tests/test_summary_snapshot_response.py \
-  trustme-api/tests/test_dashboard_routes.py \
-  trustme-api/tests/test_checkins.py \
-  trustme-api/tests/test_server.py \
-  trustme-api/tests/test_trustme_api.py \
+  tests/test_backend_overlay_package.py \
+  tests/test_dashboard_domain_service.py \
+  tests/test_dashboard_scope_service.py \
+  tests/test_dashboard_repository.py \
+  tests/test_dashboard_service.py \
+  tests/test_dashboard_details_service.py \
+  tests/test_dashboard_checkins_service.py \
+  tests/test_dashboard_summary.py \
+  tests/test_checkins.py \
+  tests/test_checkins_path_resolution.py \
   "$@"
+
+python scripts/contracts/export_dashboard_contract_ts.py >/dev/null
