@@ -4,6 +4,7 @@ __all__ = [
     "checkins",
     "controller",
     "details",
+    "details_service",
     "domain_service",
     "dto",
     "public_names",

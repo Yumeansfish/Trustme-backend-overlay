@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from trustme_api.browser.dashboard.checkins import build_checkins_payload
-from trustme_api.browser.dashboard.details import build_dashboard_details
+from trustme_api.browser.dashboard.details_service import build_dashboard_details
 from trustme_api.browser.dashboard.domain_service import (
     build_ad_hoc_summary_scope,
     build_settings_backed_summary_scope,
