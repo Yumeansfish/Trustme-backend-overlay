@@ -5,12 +5,27 @@ import sys
 from pathlib import Path
 
 
+def is_repo_root(candidate: Path) -> bool:
+    return (
+        (candidate / "pyproject.toml").is_file()
+        and (candidate / "scripts" / "_repo_bootstrap.py").is_file()
+    )
+
+
+def legacy_source_root(*, repo_root: Path) -> Path:
+    return repo_root / "trustme-api"
+
+
+def legacy_package_root(*, repo_root: Path) -> Path:
+    return legacy_source_root(repo_root=repo_root) / "trustme_api"
+
+
 def discover_repo_root(anchor: Path | None = None) -> Path:
     start = (anchor or Path(__file__)).resolve()
     current = start if start.is_dir() else start.parent
 
     for candidate in (current, *current.parents):
-        if (candidate / "trustme-api" / "trustme_api" / "__init__.py").exists():
+        if is_repo_root(candidate):
             return candidate
 
     raise RuntimeError(f"Failed to locate backend repo root from {start}")
@@ -20,7 +35,7 @@ def ensure_repo_import_paths(*, repo_root: Path | None = None) -> Path:
     resolved_root = repo_root or discover_repo_root()
     import_roots = [
         resolved_root / "src",
-        resolved_root / "trustme-api",
+        legacy_source_root(repo_root=resolved_root),
     ]
 
     for path in reversed(import_roots):
