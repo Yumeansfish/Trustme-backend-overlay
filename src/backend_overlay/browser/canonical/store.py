@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.canonical.store as _legacy_store
+import trustme_api_legacy.browser.canonical.store as _legacy_store
 
 __all__ = getattr(_legacy_store, "__all__", [])
 

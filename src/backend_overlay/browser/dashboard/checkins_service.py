@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.dashboard.checkins_service as _legacy_checkins_service
+import trustme_api_legacy.browser.dashboard.checkins_service as _legacy_checkins_service
 
 __all__ = getattr(_legacy_checkins_service, "__all__", [])
 

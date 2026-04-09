@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.dashboard.public_names as _legacy_public_names
+import trustme_api_legacy.browser.dashboard.public_names as _legacy_public_names
 
 __all__ = getattr(_legacy_public_names, "__all__", [])
 

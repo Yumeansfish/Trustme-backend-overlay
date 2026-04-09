@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.categories as _legacy_categories
+import trustme_api_legacy.browser.snapshots.categories as _legacy_categories
 
 __all__ = getattr(_legacy_categories, "__all__", [])
 

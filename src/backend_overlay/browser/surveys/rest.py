@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.rest as _legacy_rest
+import trustme_api_legacy.browser.surveys.rest as _legacy_rest
 
 __all__ = getattr(_legacy_rest, "__all__", [])
 

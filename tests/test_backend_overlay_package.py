@@ -20,6 +20,7 @@ import trustme_api.browser.surveys as trustme_surveys
 
 from backend_overlay.browser.surveys import survey_template as overlay_survey_template
 from backend_overlay.browser.settings import schema as overlay_schema
+from trustme_api_legacy.browser.settings import schema as legacy_schema
 from trustme_api.browser.surveys import survey_template as trustme_survey_template
 from trustme_api.browser.settings import schema as trustme_schema
 
@@ -36,7 +37,8 @@ def test_backend_overlay_exposes_trustme_api_metadata():
 
 def test_backend_overlay_namespace_resolves_existing_subpackages():
     assert overlay_schema.__file__.endswith("src/backend_overlay/browser/settings/schema.py")
-    assert overlay_schema.normalize_settings_data is trustme_schema.normalize_settings_data
+    assert overlay_schema.normalize_settings_data is legacy_schema.normalize_settings_data
+    assert overlay_schema.normalize_settings_data is not trustme_schema.normalize_settings_data
 
 
 def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
@@ -55,6 +57,17 @@ def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_canonical.__path__)[1:] == list(trustme_canonical.__path__)
     assert list(overlay_snapshots.__path__)[0].endswith("src/backend_overlay/browser/snapshots")
     assert list(overlay_snapshots.__path__)[1:] == list(trustme_snapshots.__path__)
+
+
+def test_backend_overlay_browser_shims_use_internal_legacy_bridge():
+    browser_root = Path("src/backend_overlay/browser")
+    offenders = []
+
+    for path in browser_root.rglob("*.py"):
+        if "trustme_api.browser." in path.read_text(encoding="utf-8"):
+            offenders.append(path.as_posix())
+
+    assert offenders == []
 
 
 def test_backend_overlay_package_includes_overlay_json_assets():

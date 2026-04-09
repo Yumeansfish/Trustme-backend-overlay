@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.remote_config as _legacy_remote_config
+import trustme_api_legacy.browser.surveys.remote_config as _legacy_remote_config
 
 __all__ = getattr(_legacy_remote_config, "__all__", [])
 

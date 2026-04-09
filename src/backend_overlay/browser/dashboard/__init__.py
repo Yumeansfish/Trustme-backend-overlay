@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import trustme_api.browser.dashboard as _legacy_dashboard
+import trustme_api_legacy.browser.dashboard as _legacy_dashboard
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 

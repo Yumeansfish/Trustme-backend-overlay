@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.result_csv as _legacy_result_csv
+import trustme_api_legacy.browser.surveys.result_csv as _legacy_result_csv
 
 __all__ = getattr(_legacy_result_csv, "__all__", [])
 

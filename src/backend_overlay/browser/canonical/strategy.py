@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.canonical.strategy as _legacy_strategy
+import trustme_api_legacy.browser.canonical.strategy as _legacy_strategy
 
 __all__ = getattr(_legacy_strategy, "__all__", [])
 

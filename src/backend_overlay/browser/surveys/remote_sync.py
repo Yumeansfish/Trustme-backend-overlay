@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.remote_sync as _legacy_remote_sync
+import trustme_api_legacy.browser.surveys.remote_sync as _legacy_remote_sync
 
 __all__ = getattr(_legacy_remote_sync, "__all__", [])
 

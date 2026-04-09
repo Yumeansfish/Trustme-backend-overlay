@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.models as _legacy_models
+import trustme_api_legacy.browser.snapshots.models as _legacy_models
 
 __all__ = getattr(_legacy_models, "__all__", [])
 

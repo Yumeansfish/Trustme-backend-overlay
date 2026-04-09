@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.segments as _legacy_segments
+import trustme_api_legacy.browser.snapshots.segments as _legacy_segments
 
 __all__ = getattr(_legacy_segments, "__all__", [])
 

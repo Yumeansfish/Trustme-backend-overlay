@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.scope as _legacy_scope
+import trustme_api_legacy.browser.snapshots.scope as _legacy_scope
 
 __all__ = getattr(_legacy_scope, "__all__", [])
 

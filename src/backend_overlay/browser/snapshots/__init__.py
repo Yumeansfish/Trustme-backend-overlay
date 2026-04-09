@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import trustme_api.browser.snapshots as _legacy_snapshots
+import trustme_api_legacy.browser.snapshots as _legacy_snapshots
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 

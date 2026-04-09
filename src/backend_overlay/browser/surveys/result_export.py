@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.result_export as _legacy_result_export
+import trustme_api_legacy.browser.surveys.result_export as _legacy_result_export
 
 __all__ = getattr(_legacy_result_export, "__all__", [])
 

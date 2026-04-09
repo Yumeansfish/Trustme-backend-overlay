@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.dashboard.controller as _legacy_controller
+import trustme_api_legacy.browser.dashboard.controller as _legacy_controller
 
 __all__ = getattr(_legacy_controller, "__all__", [])
 

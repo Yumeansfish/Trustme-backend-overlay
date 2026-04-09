@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.scheduler as _legacy_scheduler
+import trustme_api_legacy.browser.snapshots.scheduler as _legacy_scheduler
 
 __all__ = getattr(_legacy_scheduler, "__all__", [])
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.survey_template as _legacy_survey_template
+import trustme_api_legacy.browser.surveys.survey_template as _legacy_survey_template
 
 __all__ = getattr(_legacy_survey_template, "__all__", [])
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.sync as _legacy_sync
+import trustme_api_legacy.browser.surveys.sync as _legacy_sync
 
 __all__ = getattr(_legacy_sync, "__all__", [])
 

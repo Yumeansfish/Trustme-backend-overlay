@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.settings.schema as _legacy_schema
+import trustme_api_legacy.browser.settings.schema as _legacy_schema
 
 __all__ = getattr(_legacy_schema, "__all__", [])
 

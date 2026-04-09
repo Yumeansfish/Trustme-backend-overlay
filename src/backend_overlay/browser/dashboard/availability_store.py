@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.dashboard.availability_store as _legacy_availability_store
+import trustme_api_legacy.browser.dashboard.availability_store as _legacy_availability_store
 
 __all__ = getattr(_legacy_availability_store, "__all__", [])
 

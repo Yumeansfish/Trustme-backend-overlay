@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.dashboard.repository as _legacy_repository
+import trustme_api_legacy.browser.dashboard.repository as _legacy_repository
 
 __all__ = getattr(_legacy_repository, "__all__", [])
 

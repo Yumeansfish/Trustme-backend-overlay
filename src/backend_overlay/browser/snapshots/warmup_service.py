@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.warmup_service as _legacy_warmup_service
+import trustme_api_legacy.browser.snapshots.warmup_service as _legacy_warmup_service
 
 __all__ = getattr(_legacy_warmup_service, "__all__", [])
 

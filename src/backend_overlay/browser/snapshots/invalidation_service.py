@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.invalidation_service as _legacy_invalidation_service
+import trustme_api_legacy.browser.snapshots.invalidation_service as _legacy_invalidation_service
 
 __all__ = getattr(_legacy_invalidation_service, "__all__", [])
 

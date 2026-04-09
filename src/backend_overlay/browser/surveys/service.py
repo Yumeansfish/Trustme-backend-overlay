@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.surveys.service as _legacy_service
+import trustme_api_legacy.browser.surveys.service as _legacy_service
 
 __all__ = getattr(_legacy_service, "__all__", [])
 

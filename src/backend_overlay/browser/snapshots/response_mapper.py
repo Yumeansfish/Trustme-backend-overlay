@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.browser.snapshots.response_mapper as _legacy_response_mapper
+import trustme_api_legacy.browser.snapshots.response_mapper as _legacy_response_mapper
 
 __all__ = getattr(_legacy_response_mapper, "__all__", [])
 
