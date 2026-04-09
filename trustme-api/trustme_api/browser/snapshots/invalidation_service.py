@@ -7,7 +7,7 @@ from trustme_api.browser.canonical.units import (
     build_calendar_profile,
     parse_time_range,
 )
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     DashboardSummaryScope,
     build_dashboard_summary_scopes,
 )

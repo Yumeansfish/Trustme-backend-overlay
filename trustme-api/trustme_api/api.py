@@ -17,11 +17,11 @@ import iso8601
 from trustme_api.__about__ import __version__
 from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository
 from trustme_api.browser.dashboard.repository import DashboardAvailabilityRepository
-from trustme_api.browser.dashboard.service import DashboardAPI
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     resolve_group_names_for_host,
     resolve_logical_days_for_range,
 )
+from trustme_api.browser.dashboard.service import DashboardAPI
 from trustme_api.browser.dashboard.dto import (
     DashboardDefaultHostsResponse,
     DashboardDetailsResponse,

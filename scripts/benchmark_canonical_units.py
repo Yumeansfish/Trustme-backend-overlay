@@ -20,7 +20,7 @@ from trustme_api.browser.canonical.units import (  # noqa: E402
     build_benchmark_queries,
     summarize_stats,
 )
-from trustme_api.browser.dashboard.domain_service import (  # noqa: E402
+from trustme_api.browser.dashboard.scope_service import (  # noqa: E402
     build_bucket_records,
     build_dashboard_summary_scopes,
 )

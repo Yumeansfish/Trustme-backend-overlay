@@ -15,7 +15,7 @@ sys.path.insert(0, str(REPO_ROOT / "trustme-api"))
 
 from trustme_api.api import ServerAPI  # noqa: E402
 from trustme_api.app.config import config  # noqa: E402
-from trustme_api.browser.dashboard.domain_service import build_bucket_records  # noqa: E402
+from trustme_api.browser.dashboard.scope_service import build_bucket_records  # noqa: E402
 from trustme_api.browser.snapshots.invalidation_service import (  # noqa: E402
     build_snapshot_targets_from_jobs,
     invalidate_summary_snapshots_for_targets,

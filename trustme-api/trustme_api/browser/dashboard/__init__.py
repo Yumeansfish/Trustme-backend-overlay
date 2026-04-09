@@ -11,5 +11,6 @@ __all__ = [
     "public_names",
     "repository",
     "rest",
+    "scope_service",
     "service",
 ]

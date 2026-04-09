@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 from zoneinfo import ZoneInfo
 
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     DashboardSummaryScope,
     build_bucket_records,
     build_dashboard_summary_scopes,

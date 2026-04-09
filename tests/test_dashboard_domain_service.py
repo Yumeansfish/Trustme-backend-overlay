@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     build_dashboard_summary_scopes,
     resolve_dashboard_scope,
 )

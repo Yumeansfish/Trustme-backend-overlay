@@ -3,8 +3,9 @@ from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from trustme_api.browser.dashboard.checkins_service import build_checkins_payload
 from trustme_api.browser.dashboard.details_service import build_dashboard_details
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     build_ad_hoc_summary_scope,
+    build_bucket_records,
     build_settings_backed_summary_scope,
     resolve_default_dashboard_scope,
     resolve_dashboard_scope as resolve_dashboard_scope_request,
@@ -20,10 +21,6 @@ from trustme_api.browser.dashboard.dto import (
     serialize_dashboard_scope_response,
     serialize_summary_snapshot_response,
 )
-from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
-from trustme_api.browser.snapshots.warmup import build_bucket_records
-
-
 def build_summary_snapshot_response(
     *,
     db,
@@ -42,6 +39,8 @@ def build_summary_snapshot_response(
     always_active_pattern: Optional[str] = None,
     group_name: Optional[str] = None,
 ) -> SummarySnapshotResponse:
+    from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
+
     if categories is None and always_active_pattern is None:
         scope = build_settings_backed_summary_scope(
             settings_data=settings_data,

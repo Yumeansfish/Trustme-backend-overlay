@@ -7,7 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Protocol, Sequence, Tupl
 from zoneinfo import ZoneInfo
 
 from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS
-from trustme_api.browser.dashboard.domain_service import DashboardSummaryScope
+from trustme_api.browser.dashboard.scope_service import DashboardSummaryScope
 from trustme_api.browser.settings.schema import normalize_settings_data
 from trustme_api.browser.snapshots.categories import (
     compile_category_rules,

@@ -7,7 +7,7 @@ from trustme_api.browser.canonical.units import (
     ExperimentalCanonicalQueryEngine,
     infer_bucket_kind_for_logical_periods,
 )
-from trustme_api.browser.dashboard.domain_service import (
+from trustme_api.browser.dashboard.scope_service import (
     DashboardSummaryScope,
     build_ad_hoc_summary_scope,
 )
