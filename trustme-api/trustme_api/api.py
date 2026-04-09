@@ -34,7 +34,7 @@ from trustme_api.browser.settings.schema import canonicalize_setting_key
 from trustme_api.browser.settings.service import Settings
 from trustme_api.browser.surveys.answer_store import SurveyAnswerStore
 from trustme_api.browser.surveys.api_facade import SurveyAPI
-from trustme_api.browser.snapshots.invalidation import (
+from trustme_api.browser.snapshots.invalidation_service import (
     invalidate_canonical_units_for_bucket_time_range,
     invalidate_canonical_units_for_settings,
     invalidate_summary_snapshots_for_settings,

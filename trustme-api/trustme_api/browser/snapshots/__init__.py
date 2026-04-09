@@ -1,6 +1,7 @@
 __all__ = [
     "categories",
     "invalidation",
+    "invalidation_service",
     "models",
     "response",
     "response_mapper",
