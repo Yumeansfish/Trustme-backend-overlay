@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-from trustme_api.shared.dirs import get_config_dir
+from trustme_api.browser.settings.repository import SettingsRepository
 from trustme_api.browser.settings.schema import (
     canonicalize_setting_key,
     normalize_settings_data,
@@ -12,10 +11,19 @@ from trustme_api.browser.settings.schema import (
 
 
 class Settings:
-    def __init__(self, testing: bool, path: Path | None = None):
-        filename = "settings.json" if not testing else "settings-testing.json"
-        self.config_file = path or (Path(get_config_dir("aw-server")) / filename)
+    def __init__(
+        self,
+        testing: bool,
+        path: Path | None = None,
+        repository: SettingsRepository | None = None,
+    ):
+        self.repository = repository or SettingsRepository(testing=testing, path=path)
+        self.data = {}
         self.load()
+
+    @property
+    def config_file(self) -> Path:
+        return self.repository.path
 
     def __getitem__(self, key):
         return self.get(key)
@@ -24,20 +32,13 @@ class Settings:
         return self.set(key, value)
 
     def load(self):
-        if self.config_file.exists():
-            with open(self.config_file) as f:
-                raw_data = json.load(f)
-        else:
-            raw_data = {}
-
+        raw_data = self.repository.load_data()
         self.data, changed = normalize_settings_data(raw_data)
-        if changed and self.config_file.exists():
+        if changed and self.repository.exists():
             self.save()
 
     def save(self):
-        self.config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config_file, "w") as f:
-            json.dump(self.data, f, indent=4)
+        self.repository.save_data(self.data)
 
     def get(self, key: str, default=None):
         if not key:
