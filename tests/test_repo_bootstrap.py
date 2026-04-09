@@ -57,6 +57,14 @@ def test_resolve_module_file_uses_import_spec_without_importing_dependencies():
     assert resolved == REPO_ROOT / "trustme-api" / "trustme_api" / "main.py"
 
 
+def test_resolve_backend_overlay_module_file_uses_overlay_entrypoint():
+    bootstrap = load_bootstrap_module()
+
+    resolved = bootstrap.resolve_module_file("backend_overlay.main", repo_root=REPO_ROOT)
+
+    assert resolved == REPO_ROOT / "trustme-api" / "trustme_api" / "main.py"
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys

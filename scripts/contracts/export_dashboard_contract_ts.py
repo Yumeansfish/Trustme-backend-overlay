@@ -45,7 +45,7 @@ def load_repo_bootstrap():
 repo_bootstrap = load_repo_bootstrap()
 repo_bootstrap.ensure_repo_import_paths(repo_root=ROOT_DIR)
 DEFAULT_SOURCE = repo_bootstrap.resolve_module_file(
-    "trustme_api.browser.dashboard_dto",
+    "backend_overlay.browser.dashboard_dto",
     repo_root=ROOT_DIR,
 )
 

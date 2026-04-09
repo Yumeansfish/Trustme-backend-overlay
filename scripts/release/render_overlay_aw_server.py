@@ -9,23 +9,23 @@ from pathlib import Path
 
 
 FILE_MODULE_MAP = {
-    "aw_server/main.py": "trustme_api.main",
-    "aw_server/api.py": "trustme_api.api",
-    "aw_server/exceptions.py": "trustme_api.exceptions",
-    "aw_server/dashboard_dto.py": "trustme_api.browser.dashboard_dto",
-    "aw_server/config.py": "trustme_api.app.config",
-    "aw_server/custom_static.py": "trustme_api.app.custom_static",
-    "aw_server/log.py": "trustme_api.app.log",
-    "aw_server/rest.py": "trustme_api.app.rest",
-    "aw_server/server.py": "trustme_api.app.server",
+    "aw_server/main.py": "backend_overlay.main",
+    "aw_server/api.py": "backend_overlay.api",
+    "aw_server/exceptions.py": "backend_overlay.exceptions",
+    "aw_server/dashboard_dto.py": "backend_overlay.browser.dashboard_dto",
+    "aw_server/config.py": "backend_overlay.app.config",
+    "aw_server/custom_static.py": "backend_overlay.app.custom_static",
+    "aw_server/log.py": "backend_overlay.app.log",
+    "aw_server/rest.py": "backend_overlay.app.rest",
+    "aw_server/server.py": "backend_overlay.app.server",
 }
 
 DIR_MODULE_MAP = {
-    "aw_server/dashboard": "trustme_api.browser.dashboard",
-    "aw_server/snapshots": "trustme_api.browser.snapshots",
-    "aw_server/settings": "trustme_api.browser.settings",
-    "aw_server/canonical": "trustme_api.browser.canonical",
-    "aw_server/surveys": "trustme_api.browser.surveys",
+    "aw_server/dashboard": "backend_overlay.browser.dashboard",
+    "aw_server/snapshots": "backend_overlay.browser.snapshots",
+    "aw_server/settings": "backend_overlay.browser.settings",
+    "aw_server/canonical": "backend_overlay.browser.canonical",
+    "aw_server/surveys": "backend_overlay.browser.surveys",
 }
 
 OPTIONAL_DIR_CANDIDATES = {
