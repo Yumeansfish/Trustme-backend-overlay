@@ -508,3 +508,26 @@ print(schema.__file__)
 
     assert output_lines[0].endswith("src/trustme_api/__init__.py")
     assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")
+
+
+def test_trustme_api_legacy_import_works_with_only_src_on_sys_path():
+    script = f"""
+import sys
+from pathlib import Path
+repo_root = Path({str(REPO_ROOT)!r})
+sys.path = [str(repo_root / "src")] + [entry for entry in sys.path if entry not in {{str(repo_root / "src"), str(repo_root / "trustme-api")}}]
+import trustme_api_legacy
+from trustme_api_legacy.browser.settings import schema
+print(trustme_api_legacy.__file__)
+print(schema.__file__)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    output_lines = completed.stdout.strip().splitlines()
+
+    assert output_lines[0].endswith("src/trustme_api_legacy/__init__.py")
+    assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")

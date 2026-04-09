@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import trustme_api as _trustme_api
+import trustme_api_legacy as _trustme_api
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 

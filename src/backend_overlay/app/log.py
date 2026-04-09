@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.app.log as _legacy_log
+import trustme_api_legacy.app.log as _legacy_log
 
 __all__ = getattr(_legacy_log, "__all__", [])
 

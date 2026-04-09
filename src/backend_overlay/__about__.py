@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.__about__ as _legacy_about
+import trustme_api_legacy.__about__ as _legacy_about
 
 __all__ = getattr(_legacy_about, "__all__", [])
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import trustme_api.browser as _legacy_browser
+import trustme_api_legacy.browser as _legacy_browser
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 

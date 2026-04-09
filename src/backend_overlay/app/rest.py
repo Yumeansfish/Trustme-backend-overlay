@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.app.rest as _legacy_rest
+import trustme_api_legacy.app.rest as _legacy_rest
 
 __all__ = getattr(_legacy_rest, "__all__", [])
 

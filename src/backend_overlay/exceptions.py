@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.exceptions as _legacy_exceptions
+import trustme_api_legacy.exceptions as _legacy_exceptions
 
 __all__ = getattr(_legacy_exceptions, "__all__", [])
 

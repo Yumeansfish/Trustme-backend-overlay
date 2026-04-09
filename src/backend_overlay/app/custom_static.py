@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.app.custom_static as _legacy_custom_static
+import trustme_api_legacy.app.custom_static as _legacy_custom_static
 
 __all__ = getattr(_legacy_custom_static, "__all__", [])
 

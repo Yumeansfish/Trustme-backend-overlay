@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.app.server as _legacy_server
+import trustme_api_legacy.app.server as _legacy_server
 
 __all__ = getattr(_legacy_server, "__all__", [])
 

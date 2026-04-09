@@ -26,8 +26,12 @@ from trustme_api.browser.settings import schema as trustme_schema
 
 def test_backend_overlay_exposes_trustme_api_metadata():
     assert backend_overlay.__version__ == trustme_api.__version__
-    assert list(backend_overlay.__path__)[0].endswith("src/backend_overlay")
-    assert list(backend_overlay.__path__)[1:] == list(trustme_api.__path__)
+    overlay_path = list(backend_overlay.__path__)
+    trustme_path = list(trustme_api.__path__)
+
+    assert overlay_path[0].endswith("src/backend_overlay")
+    assert overlay_path[1].endswith("src/trustme_api_legacy")
+    assert overlay_path[-1] == trustme_path[-1]
 
 
 def test_backend_overlay_namespace_resolves_existing_subpackages():

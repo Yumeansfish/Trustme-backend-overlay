@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import trustme_api.app.config as _legacy_config
+import trustme_api_legacy.app.config as _legacy_config
 
 __all__ = getattr(_legacy_config, "__all__", [])
 
