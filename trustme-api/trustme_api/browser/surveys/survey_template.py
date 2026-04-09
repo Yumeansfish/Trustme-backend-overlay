@@ -3,7 +3,15 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import List, TypedDict
+from typing import List, Optional, TypedDict
+
+try:
+    from trustme_api.shared.dirs import get_data_dir
+except ModuleNotFoundError:  # pragma: no cover - overlay-only fallback
+    def get_data_dir(appname: str) -> str:
+        fallback = Path.home() / ".local" / "share" / appname
+        fallback.mkdir(parents=True, exist_ok=True)
+        return str(fallback)
 
 
 FIXED_SURVEY_TEMPLATE_ID = "avas-fixed-v1"
@@ -35,33 +43,27 @@ class FixedSurveyTemplate(TypedDict):
     questions: List[FixedSurveyQuestion]
 
 
-def _questionnaire_path() -> Path:
-    module_path = Path(__file__).resolve()
-    workspace_path = (
-        Path.home()
-        / "Desktop"
-        / "trust-me"
-        / "backend"
-        / "trustme-api"
-        / "trustme_api"
-        / "browser"
-        / "surveys"
-        / "fixed_questionnaire.v1.json"
-    )
+def _bundled_survey_template_path(module_path: Optional[Path] = None) -> Path:
+    return (module_path or Path(__file__)).resolve().with_name("fixed_questionnaire.v1.json")
+
+
+def _survey_template_path_candidates(module_path: Optional[Path] = None) -> List[Path]:
+    resolved_module_path = (module_path or Path(__file__)).resolve()
     candidates = [
         os.getenv("TRUSTME_SURVEY_TEMPLATE_PATH"),
-        workspace_path,
-        Path(__file__).with_name("fixed_questionnaire.v1.json"),
-        module_path.parents[1] / "surveys" / "fixed_questionnaire.v1.json",
-        module_path.parents[2] / "Resources" / "aw_server" / "surveys" / "fixed_questionnaire.v1.json",
+        _bundled_survey_template_path(resolved_module_path),
+        resolved_module_path.parents[2] / "Resources" / "aw_server" / "surveys" / "fixed_questionnaire.v1.json",
+        Path(get_data_dir("aw-server")) / "surveys" / "fixed_questionnaire.v1.json",
     ]
-    for candidate in candidates:
-        if not candidate:
-            continue
-        path = Path(candidate)
+    return [Path(candidate) for candidate in candidates if candidate]
+
+
+def _questionnaire_path(module_path: Optional[Path] = None) -> Path:
+    bundled_path = _bundled_survey_template_path(module_path)
+    for path in _survey_template_path_candidates(module_path):
         if path.exists():
             return path
-    return Path(__file__).with_name("fixed_questionnaire.v1.json")
+    return bundled_path
 
 
 def _normalize_questions(raw_questions: object, *, question_prefix: str) -> List[FixedSurveyQuestion]:

@@ -44,24 +44,26 @@ class CheckinPair:
     score: Optional[int]
 
 
-def resolve_checkins_data_dir() -> Path:
-    module_path = Path(__file__).resolve()
-    workspace_dir = Path.home() / "Desktop" / "trust-me" / "backend" / "trustme-api" / "aw_server" / "checkins_data"
-    bundled_dir = module_path.parents[3] / "aw_server" / "checkins_data"
-    packaged_framework_dir = module_path.parents[1] / "checkins_data"
-    packaged_resources_dir = module_path.parents[2] / "Resources" / "aw_server" / "checkins_data"
+def _bundled_checkins_data_dir(module_path: Optional[Path] = None) -> Path:
+    resolved_module_path = (module_path or Path(__file__)).resolve()
+    return resolved_module_path.parents[3] / "aw_server" / "checkins_data"
+
+
+def _checkins_data_dir_candidates(module_path: Optional[Path] = None) -> List[Path]:
+    resolved_module_path = (module_path or Path(__file__)).resolve()
     candidates = [
         os.getenv("TRUSTME_CHECKINS_DIR"),
-        workspace_dir,
+        resolved_module_path.parents[1] / "checkins_data",
+        resolved_module_path.parents[2] / "Resources" / "aw_server" / "checkins_data",
+        _bundled_checkins_data_dir(resolved_module_path),
         Path(get_data_dir("aw-server")) / "checkins",
-        packaged_framework_dir,
-        packaged_resources_dir,
-        bundled_dir,
     ]
-    for candidate in candidates:
-        if not candidate:
-            continue
-        path = Path(candidate)
+    return [Path(candidate) for candidate in candidates if candidate]
+
+
+def resolve_checkins_data_dir(module_path: Optional[Path] = None) -> Path:
+    bundled_dir = _bundled_checkins_data_dir(module_path)
+    for path in _checkins_data_dir_candidates(module_path):
         if path.exists() and any(path.iterdir()):
             return path
     return bundled_dir
