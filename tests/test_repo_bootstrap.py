@@ -305,6 +305,64 @@ def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
         assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
 
 
+def test_resolve_backend_overlay_snapshot_modules_use_overlay_shims():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "backend_overlay.browser.snapshots.categories": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "categories.py",
+        "backend_overlay.browser.snapshots.models": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "models.py",
+        "backend_overlay.browser.snapshots.repository": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "repository.py",
+        "backend_overlay.browser.snapshots.response_mapper": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "response_mapper.py",
+        "backend_overlay.browser.snapshots.scheduler": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "scheduler.py",
+        "backend_overlay.browser.snapshots.scope": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "scope.py",
+        "backend_overlay.browser.snapshots.segments": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "segments.py",
+        "backend_overlay.browser.snapshots.summary_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "summary_service.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
