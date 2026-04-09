@@ -12,7 +12,7 @@ from trustme_api.browser.dashboard.domain_service import (
     build_bucket_records,
     build_dashboard_summary_scopes,
 )
-from trustme_api.browser.snapshots.summary import build_summary_snapshot_from_scope
+from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
 
 
 logger = logging.getLogger(__name__)

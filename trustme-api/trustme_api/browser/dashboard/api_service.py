@@ -18,7 +18,7 @@ from trustme_api.browser.dashboard.dto import (
     serialize_dashboard_scope_response,
     serialize_summary_snapshot_response,
 )
-from trustme_api.browser.snapshots.summary import build_summary_snapshot_from_scope
+from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
 
 
 def build_summary_snapshot_response(

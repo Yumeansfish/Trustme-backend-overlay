@@ -8,5 +8,6 @@ __all__ = [
     "segments",
     "store",
     "summary",
+    "summary_service",
     "warmup",
 ]

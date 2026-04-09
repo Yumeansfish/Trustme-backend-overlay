@@ -19,7 +19,7 @@ sys.modules["trustme_api.shared.dirs"] = shared_dirs_module
 sys.modules["trustme_api.shared.models"] = shared_models_module
 
 from trustme_api.browser.dashboard.domain_service import build_ad_hoc_summary_scope
-from trustme_api.browser.snapshots.summary import build_summary_snapshot_from_scope
+from trustme_api.browser.snapshots.summary_service import build_summary_snapshot_from_scope
 
 
 class FakeBucket:
