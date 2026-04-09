@@ -13,4 +13,5 @@ __all__ = [
     "summary",
     "summary_service",
     "warmup",
+    "warmup_service",
 ]

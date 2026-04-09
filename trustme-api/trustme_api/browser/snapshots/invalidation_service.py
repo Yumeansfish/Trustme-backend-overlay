@@ -13,7 +13,7 @@ from trustme_api.browser.dashboard.domain_service import (
 )
 from trustme_api.browser.snapshots.scope import build_summary_snapshot_scope_key
 from trustme_api.browser.snapshots.repository import SummarySnapshotRepository
-from trustme_api.browser.snapshots.warmup import (
+from trustme_api.browser.snapshots.warmup_service import (
     SummaryWarmupJob,
     build_dashboard_summary_warmup_jobs,
 )

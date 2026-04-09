@@ -20,7 +20,7 @@ from trustme_api.browser.snapshots.invalidation_service import (  # noqa: E402
     build_snapshot_targets_from_jobs,
     invalidate_summary_snapshots_for_targets,
 )
-from trustme_api.browser.snapshots.warmup import (  # noqa: E402
+from trustme_api.browser.snapshots.warmup_service import (  # noqa: E402
     SUMMARY_WARMUP_PERIOD_ORDER,
     build_dashboard_summary_warmup_jobs,
     warm_dashboard_summary_snapshots,

@@ -20,7 +20,7 @@ def start_dashboard_summary_warmup(server_api) -> threading.Thread:
 
 
 def _warmup_loop(server_api) -> None:
-    from trustme_api.browser.snapshots.warmup import warm_dashboard_summary_snapshots
+    from trustme_api.browser.snapshots.warmup_service import warm_dashboard_summary_snapshots
 
     while True:
         started_at = time.monotonic()
