@@ -97,6 +97,26 @@ def test_resolve_backend_overlay_dashboard_dto_module_uses_overlay_entrypoint():
     assert resolved == REPO_ROOT / "src" / "backend_overlay" / "browser" / "dashboard_dto.py"
 
 
+def test_resolve_backend_overlay_feature_packages_use_overlay_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    assert bootstrap.resolve_module_file("backend_overlay.browser.dashboard", repo_root=REPO_ROOT) == (
+        REPO_ROOT / "src" / "backend_overlay" / "browser" / "dashboard" / "__init__.py"
+    )
+    assert bootstrap.resolve_module_file("backend_overlay.browser.settings", repo_root=REPO_ROOT) == (
+        REPO_ROOT / "src" / "backend_overlay" / "browser" / "settings" / "__init__.py"
+    )
+    assert bootstrap.resolve_module_file("backend_overlay.browser.surveys", repo_root=REPO_ROOT) == (
+        REPO_ROOT / "src" / "backend_overlay" / "browser" / "surveys" / "__init__.py"
+    )
+    assert bootstrap.resolve_module_file("backend_overlay.browser.canonical", repo_root=REPO_ROOT) == (
+        REPO_ROOT / "src" / "backend_overlay" / "browser" / "canonical" / "__init__.py"
+    )
+    assert bootstrap.resolve_module_file("backend_overlay.browser.snapshots", repo_root=REPO_ROOT) == (
+        REPO_ROOT / "src" / "backend_overlay" / "browser" / "snapshots" / "__init__.py"
+    )
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
