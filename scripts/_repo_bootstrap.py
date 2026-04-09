@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -35,8 +35,13 @@ def ensure_repo_import_paths(*, repo_root: Path | None = None) -> Path:
 
 def resolve_module_file(module_name: str, *, repo_root: Path | None = None) -> Path:
     ensure_repo_import_paths(repo_root=repo_root)
-    module = importlib.import_module(module_name)
-    module_file = getattr(module, "__file__", None)
-    if not isinstance(module_file, str):
-        raise RuntimeError(f"Module {module_name} does not define a filesystem path")
-    return Path(module_file).resolve()
+    spec = importlib.util.find_spec(module_name)
+    if spec is None:
+        raise RuntimeError(f"Failed to resolve import spec for module {module_name}")
+    if isinstance(spec.origin, str):
+        return Path(spec.origin).resolve()
+    if spec.submodule_search_locations:
+        first_location = next(iter(spec.submodule_search_locations), None)
+        if isinstance(first_location, str):
+            return (Path(first_location) / "__init__.py").resolve()
+    raise RuntimeError(f"Module {module_name} does not define a filesystem path")

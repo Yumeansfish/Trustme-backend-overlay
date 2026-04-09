@@ -3,29 +3,36 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import shutil
 from pathlib import Path
 
 
-FILE_MAP = {
-    "trustme-api/trustme_api/main.py": "aw_server/main.py",
-    "trustme-api/trustme_api/api.py": "aw_server/api.py",
-    "trustme-api/trustme_api/exceptions.py": "aw_server/exceptions.py",
-    "trustme-api/trustme_api/browser/dashboard_dto.py": "aw_server/dashboard_dto.py",
-    "trustme-api/trustme_api/app/config.py": "aw_server/config.py",
-    "trustme-api/trustme_api/app/custom_static.py": "aw_server/custom_static.py",
-    "trustme-api/trustme_api/app/log.py": "aw_server/log.py",
-    "trustme-api/trustme_api/app/rest.py": "aw_server/rest.py",
-    "trustme-api/trustme_api/app/server.py": "aw_server/server.py",
+FILE_MODULE_MAP = {
+    "aw_server/main.py": "trustme_api.main",
+    "aw_server/api.py": "trustme_api.api",
+    "aw_server/exceptions.py": "trustme_api.exceptions",
+    "aw_server/dashboard_dto.py": "trustme_api.browser.dashboard_dto",
+    "aw_server/config.py": "trustme_api.app.config",
+    "aw_server/custom_static.py": "trustme_api.app.custom_static",
+    "aw_server/log.py": "trustme_api.app.log",
+    "aw_server/rest.py": "trustme_api.app.rest",
+    "aw_server/server.py": "trustme_api.app.server",
 }
 
-DIR_MAP = {
-    "trustme-api/trustme_api/browser/dashboard": "aw_server/dashboard",
-    "trustme-api/trustme_api/browser/snapshots": "aw_server/snapshots",
-    "trustme-api/trustme_api/browser/settings": "aw_server/settings",
-    "trustme-api/trustme_api/browser/canonical": "aw_server/canonical",
-    "trustme-api/trustme_api/browser/surveys": "aw_server/surveys",
-    "trustme-api/aw_server/checkins_data": "aw_server/checkins_data",
+DIR_MODULE_MAP = {
+    "aw_server/dashboard": "trustme_api.browser.dashboard",
+    "aw_server/snapshots": "trustme_api.browser.snapshots",
+    "aw_server/settings": "trustme_api.browser.settings",
+    "aw_server/canonical": "trustme_api.browser.canonical",
+    "aw_server/surveys": "trustme_api.browser.surveys",
+}
+
+OPTIONAL_DIR_CANDIDATES = {
+    "aw_server/checkins_data": [
+        ".local/checkins_data",
+        "trustme-api/aw_server/checkins_data",
+    ],
 }
 
 REPLACEMENTS = [
@@ -51,12 +58,13 @@ REPLACEMENTS = [
 ]
 
 SPEC_NEEDLE = '        (os.path.join(aw_core_path, "schemas"), "aw_core/schemas"),\n'
-SPEC_INSERT = (
-    '        (os.path.join(aw_core_path, "schemas"), "aw_core/schemas"),\n'
-    '        ("aw_server/settings/settings_seed_knowledgebase.v1.json", "aw_server/settings"),\n'
-    '        ("aw_server/surveys/fixed_questionnaire.v1.json", "aw_server/surveys"),\n'
-    '        ("aw_server/checkins_data", "aw_server/checkins_data"),\n'
-)
+SPEC_INSERT_LINES = [
+    '        ("aw_server/settings/settings_seed_knowledgebase.v1.json", "aw_server/settings"),\n',
+    '        ("aw_server/surveys/fixed_questionnaire.v1.json", "aw_server/surveys"),\n',
+]
+OPTIONAL_SPEC_INSERT_LINES = {
+    "aw_server/checkins_data": '        ("aw_server/checkins_data", "aw_server/checkins_data"),\n',
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -66,6 +74,43 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--frontend-artifact-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     return parser.parse_args()
+
+
+def load_repo_bootstrap(backend_dir: Path):
+    bootstrap_path = backend_dir / "scripts" / "_repo_bootstrap.py"
+    spec = importlib.util.spec_from_file_location("backend_release_repo_bootstrap", bootstrap_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load repo bootstrap helper from {bootstrap_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def resolve_overlay_file_map(backend_dir: Path) -> dict[str, Path]:
+    repo_bootstrap = load_repo_bootstrap(backend_dir)
+    return {
+        relative_dst: repo_bootstrap.resolve_module_file(module_name, repo_root=backend_dir)
+        for relative_dst, module_name in FILE_MODULE_MAP.items()
+    }
+
+
+def resolve_overlay_dir_map(backend_dir: Path) -> dict[str, Path]:
+    repo_bootstrap = load_repo_bootstrap(backend_dir)
+    return {
+        relative_dst: repo_bootstrap.resolve_module_file(module_name, repo_root=backend_dir).parent
+        for relative_dst, module_name in DIR_MODULE_MAP.items()
+    }
+
+
+def resolve_optional_overlay_dir_map(backend_dir: Path) -> dict[str, Path]:
+    resolved: dict[str, Path] = {}
+    for relative_dst, candidates in OPTIONAL_DIR_CANDIDATES.items():
+        for relative_src in candidates:
+            candidate = (backend_dir / relative_src).resolve()
+            if candidate.exists():
+                resolved[relative_dst] = candidate
+                break
+    return resolved
 
 
 def copy_tree(src: Path, dst: Path) -> None:
@@ -101,11 +146,16 @@ def rewrite_tree(path: Path) -> None:
         rewrite_python_file(file_path)
 
 
-def patch_aw_server_spec(path: Path) -> None:
+def patch_aw_server_spec(path: Path, *, optional_overlay_dirs: dict[str, Path] | None = None) -> None:
     data = path.read_text(encoding="utf-8")
-    if '"aw_server/checkins_data"' in data:
+    if '"aw_server/settings/settings_seed_knowledgebase.v1.json"' in data:
         return
-    data = data.replace(SPEC_NEEDLE, SPEC_INSERT)
+    insert_lines = [SPEC_NEEDLE, *SPEC_INSERT_LINES]
+    for relative_dst in (optional_overlay_dirs or {}):
+        optional_line = OPTIONAL_SPEC_INSERT_LINES.get(relative_dst)
+        if optional_line is not None:
+            insert_lines.append(optional_line)
+    data = data.replace(SPEC_NEEDLE, "".join(insert_lines))
     path.write_text(data, encoding="utf-8")
 
 
@@ -129,25 +179,31 @@ def main() -> None:
         raise SystemExit(f"Frontend artifact directory not found: {frontend_artifact_dir}")
 
     copy_tree(upstream_aw_server_dir, output_dir)
+    file_map = resolve_overlay_file_map(backend_dir)
+    dir_map = resolve_overlay_dir_map(backend_dir)
+    optional_dir_map = resolve_optional_overlay_dir_map(backend_dir)
 
     legacy_settings_module = output_dir / "aw_server" / "settings.py"
     if legacy_settings_module.exists():
         legacy_settings_module.unlink()
 
-    for relative_src, relative_dst in FILE_MAP.items():
-        src = backend_dir / relative_src
+    for relative_dst, src in file_map.items():
         dst = output_dir / relative_dst
         copy_path(src, dst)
         rewrite_tree(dst)
 
-    for relative_src, relative_dst in DIR_MAP.items():
-        src = backend_dir / relative_src
+    for relative_dst, src in dir_map.items():
+        dst = output_dir / relative_dst
+        copy_path(src, dst)
+        rewrite_tree(dst)
+
+    for relative_dst, src in optional_dir_map.items():
         dst = output_dir / relative_dst
         copy_path(src, dst)
         rewrite_tree(dst)
 
     replace_frontend_static(frontend_artifact_dir, output_dir)
-    patch_aw_server_spec(output_dir / "aw-server.spec")
+    patch_aw_server_spec(output_dir / "aw-server.spec", optional_overlay_dirs=optional_dir_map)
 
 
 if __name__ == "__main__":
