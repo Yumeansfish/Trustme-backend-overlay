@@ -9,14 +9,12 @@ import importlib.util
 import json
 import sys
 import types
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, get_args, get_origin, is_typeddict
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
-TRUSTME_API_DIR = ROOT_DIR / "trustme-api"
-DEFAULT_SOURCE = TRUSTME_API_DIR / "trustme_api" / "browser" / "dashboard_dto.py"
+BOOTSTRAP_PATH = ROOT_DIR / "scripts" / "_repo_bootstrap.py"
 DEFAULT_EXPORTS = [
     "EventData",
     "AggregatedEvent",
@@ -33,6 +31,23 @@ DEFAULT_EXPORTS = [
     "CheckinSession",
     "CheckinsResponse",
 ]
+
+
+def load_repo_bootstrap():
+    spec = importlib.util.spec_from_file_location("backend_contract_repo_bootstrap", BOOTSTRAP_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load repo bootstrap helper from {BOOTSTRAP_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+repo_bootstrap = load_repo_bootstrap()
+repo_bootstrap.ensure_repo_import_paths(repo_root=ROOT_DIR)
+DEFAULT_SOURCE = repo_bootstrap.resolve_module_file(
+    "trustme_api.browser.dashboard_dto",
+    repo_root=ROOT_DIR,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,45 +69,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-@contextmanager
-def temporary_sys_path(path: Path):
-    path_str = str(path)
-    if path_str in sys.path:
-        yield
-        return
-
-    sys.path.insert(0, path_str)
-    try:
-        yield
-    finally:
-        if sys.path and sys.path[0] == path_str:
-            sys.path.pop(0)
-        elif path_str in sys.path:
-            sys.path.remove(path_str)
-
-
 def load_module(module_path: Path):
     spec = importlib.util.spec_from_file_location("dashboard_dto_codegen_source", module_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Failed to load module from {module_path}")
     module = importlib.util.module_from_spec(spec)
-    with temporary_sys_path(TRUSTME_API_DIR):
-        spec.loader.exec_module(module)
+    spec.loader.exec_module(module)
     return module
 
 
 def resolve_contract_source_path(module, fallback_path: Path) -> Path:
     candidate_paths: list[Path] = []
-    with temporary_sys_path(TRUSTME_API_DIR):
-        for name in DEFAULT_EXPORTS:
-            exported = getattr(module, name, None)
-            origin_module_name = getattr(exported, "__module__", None)
-            if not isinstance(origin_module_name, str):
-                continue
-            origin_module = importlib.import_module(origin_module_name)
-            origin_file = getattr(origin_module, "__file__", None)
-            if origin_file:
-                candidate_paths.append(Path(origin_file).resolve())
+    for name in DEFAULT_EXPORTS:
+        exported = getattr(module, name, None)
+        origin_module_name = getattr(exported, "__module__", None)
+        if not isinstance(origin_module_name, str):
+            continue
+        origin_module = importlib.import_module(origin_module_name)
+        origin_file = getattr(origin_module, "__file__", None)
+        if origin_file:
+            candidate_paths.append(Path(origin_file).resolve())
 
     if candidate_paths and all(path == candidate_paths[0] for path in candidate_paths):
         return candidate_paths[0]

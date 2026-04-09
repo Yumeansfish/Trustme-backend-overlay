@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trustme-api"
+version = "0.13.2"
+description = "Trust-me backend overlay package"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Trust-me" }]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src", "trustme-api"]
+include = ["backend_overlay*", "trustme_api*"]
+
+[tool.setuptools.package-data]
+"trustme_api.browser.settings" = ["*.json"]
+"trustme_api.browser.surveys" = ["*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -2,13 +2,13 @@
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
+from _repo_bootstrap import ensure_repo_import_paths
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "trustme-api"))
+ensure_repo_import_paths(repo_root=REPO_ROOT)
 
 from trustme_api.api import ServerAPI  # noqa: E402
 from trustme_api.app.config import config  # noqa: E402

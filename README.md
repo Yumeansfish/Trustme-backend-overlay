@@ -34,6 +34,13 @@ Or from the workspace root:
 ./make-sync
 ```
 
+For repo-local Python imports and test runs, the overlay now exposes a standard package definition:
+
+```bash
+python3 -m pip install -e .
+python3 -m pytest
+```
+
 `make build-bundle` assembles a portable browser-line bundle from:
 
 - `frontend/` for the static UI artifact
