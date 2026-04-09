@@ -10,21 +10,21 @@ from _repo_bootstrap import ensure_repo_import_paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ensure_repo_import_paths(repo_root=REPO_ROOT)
 
-from trustme_api.api import ServerAPI  # noqa: E402
-from trustme_api.app.config import config  # noqa: E402
-from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository  # noqa: E402
-from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS  # noqa: E402
-from trustme_api.browser.canonical.units import (  # noqa: E402
+from backend_overlay.api import ServerAPI  # noqa: E402
+from backend_overlay.app.config import config  # noqa: E402
+from backend_overlay.browser.canonical.repository import SqliteCanonicalUnitRepository  # noqa: E402
+from backend_overlay.browser.canonical.strategy import PERSISTED_UNIT_KINDS  # noqa: E402
+from backend_overlay.browser.canonical.units import (  # noqa: E402
     ExperimentalCanonicalQueryEngine,
     SCENARIO_NAMES,
     build_benchmark_queries,
     summarize_stats,
 )
-from trustme_api.browser.dashboard.scope_service import (  # noqa: E402
+from backend_overlay.browser.dashboard.scope_service import (  # noqa: E402
     build_bucket_records,
     build_dashboard_summary_scopes,
 )
-from trustme_api.storage import Datastore, get_storage_methods  # noqa: E402
+from backend_overlay.storage import Datastore, get_storage_methods  # noqa: E402
 
 
 def build_server_api(testing: bool, storage_name: str = "") -> ServerAPI:

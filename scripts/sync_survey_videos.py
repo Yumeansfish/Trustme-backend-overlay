@@ -9,7 +9,7 @@ from _repo_bootstrap import ensure_repo_import_paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ensure_repo_import_paths(repo_root=REPO_ROOT)
 
-from trustme_api.browser.surveys.sync import (  # noqa: E402
+from backend_overlay.browser.surveys.sync import (  # noqa: E402
     default_survey_video_cache_dir,
     default_survey_video_remote_dir,
     default_survey_video_remote_host,
