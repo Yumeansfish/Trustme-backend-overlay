@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, Optional, Set
 from urllib.parse import quote
 
 from .dto import SurveyBundleDTO, SurveyInstanceDTO, SurveyVideoDTO
-from .questionnaire import FIXED_SURVEY_TEMPLATE_ID, load_fixed_survey_template
+from .survey_template import FIXED_SURVEY_TEMPLATE_ID, load_fixed_survey_template
 from .sync import ALLOWED_VIDEO_SUFFIXES, default_survey_video_cache_dir
 
 LOCAL_TZ = datetime.now().astimezone().tzinfo
