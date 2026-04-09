@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+import trustme_api.browser.dashboard.availability_store as _legacy_availability_store
+
+__all__ = getattr(_legacy_availability_store, "__all__", [])
+
+
+def __getattr__(name):
+    return getattr(_legacy_availability_store, name)
+
+
+def __dir__():
+    return sorted(set(globals()) | set(dir(_legacy_availability_store)))

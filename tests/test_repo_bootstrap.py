@@ -191,6 +191,30 @@ def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
     bootstrap = load_bootstrap_module()
 
     expected = {
+        "backend_overlay.browser.dashboard.api_facade": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "api_facade.py",
+        "backend_overlay.browser.dashboard.api_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "api_service.py",
+        "backend_overlay.browser.dashboard.availability_store": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "availability_store.py",
+        "backend_overlay.browser.dashboard.checkins": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "checkins.py",
         "backend_overlay.browser.dashboard.checkins_service": REPO_ROOT
         / "src"
         / "backend_overlay"
@@ -209,6 +233,18 @@ def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
         / "browser"
         / "dashboard"
         / "details_service.py",
+        "backend_overlay.browser.dashboard.details": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "details.py",
+        "backend_overlay.browser.dashboard.domain_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "domain_service.py",
         "backend_overlay.browser.dashboard.dto": REPO_ROOT
         / "src"
         / "backend_overlay"
@@ -227,6 +263,12 @@ def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
         / "browser"
         / "dashboard"
         / "repository.py",
+        "backend_overlay.browser.dashboard.rest": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "rest.py",
         "backend_overlay.browser.dashboard.service": REPO_ROOT
         / "src"
         / "backend_overlay"
@@ -275,12 +317,42 @@ def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
         / "browser"
         / "surveys"
         / "remote_sync.py",
+        "backend_overlay.browser.surveys.answer_store": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "answer_store.py",
+        "backend_overlay.browser.surveys.api_facade": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "api_facade.py",
+        "backend_overlay.browser.surveys.questionnaire": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "questionnaire.py",
         "backend_overlay.browser.surveys.repository": REPO_ROOT
         / "src"
         / "backend_overlay"
         / "browser"
         / "surveys"
         / "repository.py",
+        "backend_overlay.browser.surveys.rest": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "rest.py",
+        "backend_overlay.browser.surveys.result_csv": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "result_csv.py",
         "backend_overlay.browser.surveys.result_export": REPO_ROOT
         / "src"
         / "backend_overlay"
