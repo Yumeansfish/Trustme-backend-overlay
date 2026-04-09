@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 import subprocess
-from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Sequence
+
+from .remote_config import (
+    default_result_csv_remote_host,
+    default_result_csv_remote_path,
+    resolve_survey_result_remote_config,
+)
 
 
 RESULT_CSV_HEADER = ["Timestamp", "Video Name", "Question", "Answer"]
@@ -30,16 +34,6 @@ with open(target_path, "a", encoding="utf-8", newline="") as handle:
         writer.writerow(["Timestamp", "Video Name", "Question", "Answer"])
     writer.writerows(payload)
 """
-
-
-def default_result_csv_remote_host() -> str:
-    return os.getenv("TRUSTME_SURVEY_RESULT_REMOTE_HOST", "uc-workstation")
-
-
-def default_result_csv_remote_path() -> str:
-    return os.getenv("TRUSTME_SURVEY_RESULT_REMOTE_PATH", "~/result.csv")
-
-
 def _build_question_text_lookup(questions: Sequence[Dict]) -> Dict[str, str]:
     return {
         question["id"]: question["text"]
@@ -136,18 +130,20 @@ def append_rows_to_remote_result_csv(
     remote_path: str | None = None,
     runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
 ) -> None:
-    resolved_remote_host = remote_host or default_result_csv_remote_host()
-    resolved_remote_path = remote_path or default_result_csv_remote_path()
+    remote_config = resolve_survey_result_remote_config(
+        remote_host=remote_host,
+        remote_path=remote_path,
+    )
     remote_command = (
         "python3 -c "
         + shlex.quote(REMOTE_APPEND_SCRIPT)
         + " "
-        + shlex.quote(resolved_remote_path)
+        + shlex.quote(remote_config.remote_path)
     )
 
     try:
         runner(
-            ["ssh", resolved_remote_host, remote_command],
+            ["ssh", remote_config.remote_host, remote_command],
             input=json.dumps([list(row) for row in rows]),
             check=True,
             capture_output=True,
@@ -156,5 +152,5 @@ def append_rows_to_remote_result_csv(
     except subprocess.CalledProcessError as exc:  # pragma: no cover - exercised via integration
         stderr = exc.stderr.strip() if isinstance(exc.stderr, str) else str(exc)
         raise RuntimeError(
-            f"Failed to append survey results to {resolved_remote_host}:{resolved_remote_path}: {stderr}"
+            f"Failed to append survey results to {remote_config.remote_host}:{remote_config.remote_path}: {stderr}"
         ) from exc

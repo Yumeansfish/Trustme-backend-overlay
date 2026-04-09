@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import json
-import os
 import shlex
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Iterable, List, Sequence
+
+from .remote_config import (
+    default_survey_video_remote_dir,
+    default_survey_video_remote_host,
+    resolve_survey_video_remote_config,
+)
 
 
 ALLOWED_VIDEO_SUFFIXES = (".mov", ".mp4")
@@ -39,16 +44,6 @@ def default_survey_video_cache_dir() -> Path:
     else:
         base = Path.home() / ".cache"
     return base / "trust-me" / "surveys" / "videos"
-
-
-def default_survey_video_remote_host() -> str:
-    return os.getenv("TRUSTME_SURVEY_VIDEO_REMOTE_HOST", "uc-workstation")
-
-
-def default_survey_video_remote_dir() -> str:
-    return os.getenv("TRUSTME_SURVEY_VIDEO_REMOTE_DIR", "~/highlights")
-
-
 @dataclass(frozen=True)
 class RemoteSurveyVideo:
     name: str
@@ -162,17 +157,19 @@ def delete_remote_survey_videos(
     normalized_names = _normalize_video_names(video_names)
     if not normalized_names:
         return []
-    resolved_remote_host = remote_host or default_survey_video_remote_host()
-    resolved_remote_dir = remote_dir or default_survey_video_remote_dir()
+    remote_config = resolve_survey_video_remote_config(
+        remote_host=remote_host,
+        remote_dir=remote_dir,
+    )
     remote_command = (
         "python3 -c "
         + shlex.quote(REMOTE_DELETE_SCRIPT)
         + " "
-        + shlex.quote(resolved_remote_dir)
+        + shlex.quote(remote_config.remote_dir)
     )
     try:
         runner(
-            ["ssh", resolved_remote_host, remote_command],
+            ["ssh", remote_config.remote_host, remote_command],
             input=json.dumps(normalized_names),
             check=True,
             capture_output=True,
@@ -181,7 +178,7 @@ def delete_remote_survey_videos(
     except subprocess.CalledProcessError as exc:  # pragma: no cover - exercised via integration
         stderr = exc.stderr.strip() if isinstance(exc.stderr, str) else str(exc)
         raise RuntimeError(
-            f"Failed to delete survey videos from {resolved_remote_host}:{resolved_remote_dir}: {stderr}"
+            f"Failed to delete survey videos from {remote_config.remote_host}:{remote_config.remote_dir}: {stderr}"
         ) from exc
     return normalized_names
 
@@ -217,10 +214,18 @@ def sync_missing_remote_videos(
     local_dir: Path | None = None,
     runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
 ) -> SurveyVideoSyncResult:
+    remote_config = resolve_survey_video_remote_config(
+        remote_host=remote_host,
+        remote_dir=remote_dir,
+    )
     resolved_local_dir = (local_dir or default_survey_video_cache_dir()).expanduser().resolve()
     resolved_local_dir.mkdir(parents=True, exist_ok=True)
 
-    remote_videos = list_remote_survey_videos(remote_host, remote_dir, runner=runner)
+    remote_videos = list_remote_survey_videos(
+        remote_config.remote_host,
+        remote_config.remote_dir,
+        runner=runner,
+    )
     copied: List[str] = []
     skipped_existing: List[str] = []
 
@@ -230,7 +235,7 @@ def sync_missing_remote_videos(
             skipped_existing.append(video.name)
             continue
         copy_remote_survey_video(
-            remote_host,
+            remote_config.remote_host,
             video.remote_path,
             local_path,
             runner=runner,
@@ -238,8 +243,8 @@ def sync_missing_remote_videos(
         copied.append(video.name)
 
     return SurveyVideoSyncResult(
-        remote_host=remote_host,
-        remote_dir=remote_dir,
+        remote_host=remote_config.remote_host,
+        remote_dir=remote_config.remote_dir,
         local_dir=str(resolved_local_dir),
         copied=copied,
         skipped_existing=skipped_existing,
