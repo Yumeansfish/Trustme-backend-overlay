@@ -57,10 +57,25 @@ def _bundled_checkins_data_dir(module_path: Optional[Path] = None) -> Path:
     return resolved_module_path.parents[3] / "aw_server" / "checkins_data"
 
 
+def _repo_local_checkins_data_dir(module_path: Optional[Path] = None) -> Optional[Path]:
+    resolved_module_path = (module_path or Path(__file__)).resolve()
+    current = resolved_module_path.parent
+
+    for candidate in (current, *current.parents):
+        if (
+            (candidate / "pyproject.toml").is_file()
+            and (candidate / "scripts" / "_repo_bootstrap.py").is_file()
+        ):
+            return candidate / ".local" / "checkins_data"
+
+    return None
+
+
 def _checkins_data_dir_candidates(module_path: Optional[Path] = None) -> List[Path]:
     resolved_module_path = (module_path or Path(__file__)).resolve()
     candidates = [
         os.getenv("TRUSTME_CHECKINS_DIR"),
+        _repo_local_checkins_data_dir(resolved_module_path),
         resolved_module_path.parents[1] / "checkins_data",
         resolved_module_path.parents[2] / "Resources" / "aw_server" / "checkins_data",
         _bundled_checkins_data_dir(resolved_module_path),

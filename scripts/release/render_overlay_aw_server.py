@@ -31,7 +31,6 @@ DIR_MODULE_MAP = {
 OPTIONAL_DIR_CANDIDATES = {
     "aw_server/checkins_data": [
         ".local/checkins_data",
-        "trustme-api/aw_server/checkins_data",
     ],
 }
 

@@ -57,3 +57,17 @@ def test_patch_aw_server_spec_includes_optional_demo_assets_when_present(tmp_pat
 
     patched = spec_path.read_text(encoding="utf-8")
     assert '"aw_server/checkins_data"' in patched
+
+
+def test_resolve_optional_overlay_dir_map_prefers_repo_local_demo_assets(tmp_path):
+    script = load_script_module()
+    backend_dir = tmp_path / "backend"
+    local_demo_dir = backend_dir / ".local" / "checkins_data"
+
+    local_demo_dir.mkdir(parents=True)
+
+    resolved = script.resolve_optional_overlay_dir_map(backend_dir)
+
+    assert resolved == {
+        "aw_server/checkins_data": local_demo_dir.resolve(),
+    }
