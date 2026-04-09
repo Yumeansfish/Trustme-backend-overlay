@@ -1,3 +1,6 @@
+from pathlib import Path
+import tomllib
+
 import backend_overlay
 import backend_overlay.app as overlay_app
 import backend_overlay.browser as overlay_browser
@@ -15,7 +18,9 @@ import trustme_api.browser.settings as trustme_settings
 import trustme_api.browser.snapshots as trustme_snapshots
 import trustme_api.browser.surveys as trustme_surveys
 
+from backend_overlay.browser.surveys import survey_template as overlay_survey_template
 from backend_overlay.browser.settings import schema as overlay_schema
+from trustme_api.browser.surveys import survey_template as trustme_survey_template
 from trustme_api.browser.settings import schema as trustme_schema
 
 
@@ -46,3 +51,23 @@ def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_canonical.__path__)[1:] == list(trustme_canonical.__path__)
     assert list(overlay_snapshots.__path__)[0].endswith("src/backend_overlay/browser/snapshots")
     assert list(overlay_snapshots.__path__)[1:] == list(trustme_snapshots.__path__)
+
+
+def test_backend_overlay_package_includes_overlay_json_assets():
+    overlay_settings_asset = Path(overlay_schema.__file__).with_name("settings_seed_knowledgebase.v1.json")
+    overlay_surveys_asset = Path(overlay_survey_template.__file__).with_name("fixed_questionnaire.v1.json")
+    trustme_settings_asset = Path(trustme_schema.__file__).with_name("settings_seed_knowledgebase.v1.json")
+    trustme_surveys_asset = Path(trustme_survey_template.__file__).with_name("fixed_questionnaire.v1.json")
+
+    assert overlay_settings_asset.exists()
+    assert overlay_surveys_asset.exists()
+    assert overlay_settings_asset.read_text(encoding="utf-8") == trustme_settings_asset.read_text(encoding="utf-8")
+    assert overlay_surveys_asset.read_text(encoding="utf-8") == trustme_surveys_asset.read_text(encoding="utf-8")
+
+
+def test_pyproject_declares_overlay_package_data_entries():
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    package_data = pyproject["tool"]["setuptools"]["package-data"]
+
+    assert package_data["backend_overlay.browser.settings"] == ["*.json"]
+    assert package_data["backend_overlay.browser.surveys"] == ["*.json"]

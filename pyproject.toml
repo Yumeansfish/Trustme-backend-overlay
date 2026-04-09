@@ -18,6 +18,8 @@ where = ["src"]
 include = ["backend_overlay*", "trustme_api*"]
 
 [tool.setuptools.package-data]
+"backend_overlay.browser.settings" = ["*.json"]
+"backend_overlay.browser.surveys" = ["*.json"]
 "trustme_api.browser.settings" = ["*.json"]
 "trustme_api.browser.surveys" = ["*.json"]
 
