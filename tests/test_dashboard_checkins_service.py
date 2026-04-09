@@ -1,0 +1,6 @@
+from trustme_api.browser.dashboard.checkins import build_checkins_payload as legacy_build_checkins_payload
+from trustme_api.browser.dashboard.checkins_service import build_checkins_payload
+
+
+def test_checkins_shim_reexports_checkins_service():
+    assert legacy_build_checkins_payload is build_checkins_payload

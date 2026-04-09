@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from trustme_api.browser.dashboard import checkins
+from trustme_api.browser.dashboard import checkins_service as checkins
 
 
 def _module_path(tmp_path: Path) -> Path:

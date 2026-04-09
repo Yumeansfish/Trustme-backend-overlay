@@ -2,6 +2,7 @@ __all__ = [
     "api_facade",
     "api_service",
     "checkins",
+    "checkins_service",
     "controller",
     "details",
     "details_service",
