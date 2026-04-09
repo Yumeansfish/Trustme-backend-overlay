@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 from zoneinfo import ZoneInfo
 
-from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
+from trustme_api.browser.dashboard.repository import DashboardAvailabilityRepository
 from trustme_api.browser.settings.schema import normalize_settings_data
 
 
@@ -174,7 +174,7 @@ def resolve_dashboard_scope(
     overlap_start_ms: Optional[float] = None,
     overlap_end_ms: Optional[float] = None,
     db=None,
-    availability_store: Optional[DashboardAvailabilityStore] = None,
+    availability_store: Optional[DashboardAvailabilityRepository] = None,
 ) -> DashboardResolvedScope:
     settings_data, _ = normalize_settings_data(settings_data)
     known_hosts = _extract_known_hosts(bucket_records)
@@ -391,7 +391,7 @@ def _resolve_dashboard_availability(
     window_buckets: Sequence[str],
     afk_buckets: Sequence[str],
     db,
-    availability_store: DashboardAvailabilityStore,
+    availability_store: DashboardAvailabilityRepository,
 ) -> tuple[List[str], str, str]:
     if not group_name or not resolved_hosts or not window_buckets or not afk_buckets:
         if group_name:
@@ -480,7 +480,7 @@ def _rebuild_dashboard_availability_days(
     window_buckets: Sequence[str],
     afk_buckets: Sequence[str],
     db,
-    availability_store: DashboardAvailabilityStore,
+    availability_store: DashboardAvailabilityRepository,
 ) -> List[str]:
     local_timezone = _resolve_local_timezone()
     range_start, _ = _logical_day_bounds(

@@ -17,7 +17,7 @@ import iso8601
 from trustme_api.__about__ import __version__
 from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository
 from trustme_api.browser.dashboard.api_facade import DashboardAPI
-from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
+from trustme_api.browser.dashboard.repository import DashboardAvailabilityRepository
 from trustme_api.browser.dashboard.domain_service import (
     resolve_group_names_for_host,
     resolve_logical_days_for_range,
@@ -88,7 +88,7 @@ class ServerAPI:
         self.last_event = {}  # type: dict
         self.summary_snapshot_store = SummarySnapshotRepository(testing=testing)
         self.canonical_unit_store = SqliteCanonicalUnitRepository(testing=testing)
-        self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
+        self.dashboard_availability_store = DashboardAvailabilityRepository(testing=testing)
         self.survey_answer_store = SurveyAnswerRepository(testing=testing)
         self.dashboard = DashboardAPI(
             db=db,
