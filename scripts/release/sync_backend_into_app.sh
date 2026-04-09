@@ -7,7 +7,7 @@ DIST_DIR="${2:-}"
 MANIFEST_NAME=".trustme-browser-backend-manifest"
 
 if [[ -z "$APP_PATH" || -z "$DIST_DIR" ]]; then
-  echo "Usage: $0 /Applications/trust-me.app /path/to/dist/trustme-api" >&2
+  echo "Usage: $0 /Applications/trust-me.app /path/to/dist/backend-bundle" >&2
   exit 1
 fi
 
@@ -38,10 +38,20 @@ if [[ ! -d "$DIST_DIR" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$DIST_DIR/trustme-api" ]]; then
-  echo "Expected executable not found: $DIST_DIR/trustme-api" >&2
-  exit 1
-fi
+resolve_backend_executable() {
+  local candidate
+  for candidate in "$DIST_DIR/aw-server" "$DIST_DIR/trustme-api"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  echo "Expected backend executable not found under $DIST_DIR (looked for aw-server and trustme-api)" >&2
+  return 1
+}
+
+BACKEND_EXECUTABLE="$(resolve_backend_executable)"
 
 if pgrep -af "$APP_MACOS_DIR/" >/dev/null 2>&1; then
   echo "The installed trust-me app appears to be running. Quit it before syncing." >&2
@@ -61,12 +71,12 @@ fi
 
 while IFS= read -r source_path; do
   name="$(basename "$source_path")"
-  [[ "$name" == "trustme-api" ]] && continue
+  [[ "$name" == "aw-server" || "$name" == "trustme-api" ]] && continue
   rsync -a "$source_path" "$APP_FRAMEWORKS_DIR/"
   printf '%s\n' "Frameworks/$name" >> "$TMP_MANIFEST"
 done < <(find "$DIST_DIR" -mindepth 1 -maxdepth 1 | sort)
 
-install -m 755 "$DIST_DIR/trustme-api" "$APP_MACOS_DIR/aw-server"
+install -m 755 "$BACKEND_EXECUTABLE" "$APP_MACOS_DIR/aw-server"
 printf '%s\n' "MacOS/aw-server" >> "$TMP_MANIFEST"
 mv "$TMP_MANIFEST" "$MANIFEST_PATH"
 
