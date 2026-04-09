@@ -510,6 +510,45 @@ print(schema.__file__)
     assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")
 
 
+def test_trustme_api_bridges_upstream_aw_core_modules_with_only_src_on_sys_path():
+    script = f"""
+import sys
+from pathlib import Path
+repo_root = Path({str(REPO_ROOT)!r})
+sys.path = [str(repo_root / "src")] + [entry for entry in sys.path if entry not in {{str(repo_root / "src"), str(repo_root / "trustme-api")}}]
+from trustme_api.shared.dirs import get_data_dir
+from trustme_api.query import query2
+from trustme_api.query.exceptions import QueryException
+from trustme_api.storage import Datastore, get_storage_methods
+from trustme_api.transform import heartbeat_merge
+import backend_overlay.storage as overlay_storage
+print(get_data_dir.__module__)
+print(query2.__name__)
+print(QueryException.__module__)
+print(Datastore.__module__)
+print(get_storage_methods.__module__)
+print(heartbeat_merge.__module__)
+print(overlay_storage.get_storage_methods.__module__)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    output_lines = completed.stdout.strip().splitlines()
+
+    assert output_lines == [
+        "aw_core.dirs",
+        "aw_query.query2",
+        "aw_query.exceptions",
+        "aw_datastore.datastore",
+        "aw_datastore",
+        "aw_transform.heartbeats",
+        "aw_datastore",
+    ]
+
+
 def test_trustme_api_legacy_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys

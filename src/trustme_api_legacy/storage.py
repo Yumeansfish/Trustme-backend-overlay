@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-import trustme_api_legacy.storage as _legacy_storage
+from trustme_api_legacy._upstream_aw_core_bootstrap import ensure_aw_core_import_paths
+
+ensure_aw_core_import_paths()
+
+import aw_datastore as _legacy_storage
 
 __all__ = getattr(_legacy_storage, "__all__", [])
 
