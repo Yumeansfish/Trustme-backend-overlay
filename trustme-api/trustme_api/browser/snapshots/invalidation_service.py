@@ -12,7 +12,7 @@ from trustme_api.browser.dashboard.domain_service import (
     build_dashboard_summary_scopes,
 )
 from trustme_api.browser.snapshots.scope import build_summary_snapshot_scope_key
-from trustme_api.browser.snapshots.store import SummarySnapshotStore
+from trustme_api.browser.snapshots.repository import SummarySnapshotRepository
 from trustme_api.browser.snapshots.warmup import (
     SummaryWarmupJob,
     build_dashboard_summary_warmup_jobs,
@@ -106,7 +106,7 @@ def diff_snapshot_targets(
 
 def invalidate_summary_snapshots_for_targets(
     *,
-    store: SummarySnapshotStore,
+    store: SummarySnapshotRepository,
     targets: List[Dict[str, Any]],
 ) -> int:
     deleted = 0
@@ -120,7 +120,7 @@ def invalidate_summary_snapshots_for_targets(
 
 def invalidate_summary_snapshots_for_settings(
     *,
-    store: SummarySnapshotStore,
+    store: SummarySnapshotRepository,
     previous_settings_data: Dict[str, Any],
     settings_data: Dict[str, Any],
     bucket_records: List[Dict[str, Any]],

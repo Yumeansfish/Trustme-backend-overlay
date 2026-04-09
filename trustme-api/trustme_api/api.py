@@ -39,7 +39,7 @@ from trustme_api.browser.snapshots.invalidation_service import (
     invalidate_canonical_units_for_settings,
     invalidate_summary_snapshots_for_settings,
 )
-from trustme_api.browser.snapshots.store import SummarySnapshotStore
+from trustme_api.browser.snapshots.repository import SummarySnapshotRepository
 from trustme_api.browser.snapshots.warmup import build_bucket_records
 from trustme_api.exceptions import BadRequest, NotFound
 from trustme_api.query import query2
@@ -86,7 +86,7 @@ class ServerAPI:
         self.settings = Settings(testing)
         self.testing = testing
         self.last_event = {}  # type: dict
-        self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
+        self.summary_snapshot_store = SummarySnapshotRepository(testing=testing)
         self.canonical_unit_store = SqliteCanonicalUnitRepository(testing=testing)
         self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
         self.survey_answer_store = SurveyAnswerStore(testing=testing)

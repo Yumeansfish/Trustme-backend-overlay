@@ -37,7 +37,7 @@ from trustme_api.browser.snapshots.models import (
     SummarySegment,
     datetime_to_ms,
 )
-from trustme_api.browser.snapshots.store import SummarySnapshotStore
+from trustme_api.browser.snapshots.repository import SummarySnapshotRepository
 
 
 def build_summary_snapshot(
@@ -53,7 +53,7 @@ def build_summary_snapshot(
     categories: Sequence[Any],
     filter_categories: Sequence[Sequence[str]],
     always_active_pattern: str = "",
-    store: Optional[SummarySnapshotStore] = None,
+    store: Optional[SummarySnapshotRepository] = None,
     calendar_settings: Optional[Dict[str, Any]] = None,
     canonical_unit_store=None,
     now: Optional[datetime] = None,
@@ -87,7 +87,7 @@ def build_summary_snapshot_from_scope(
     range_end: datetime,
     category_periods: Sequence[str],
     scope: DashboardSummaryScope,
-    store: Optional[SummarySnapshotStore] = None,
+    store: Optional[SummarySnapshotRepository] = None,
     calendar_settings: Optional[Dict[str, Any]] = None,
     canonical_unit_store=None,
     now: Optional[datetime] = None,
