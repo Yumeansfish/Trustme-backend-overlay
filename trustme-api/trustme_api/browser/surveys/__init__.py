@@ -1,6 +1,7 @@
 """Survey/video integration helpers for the browser backend."""
 
 __all__ = [
+    "controller",
     "remote_sync",
     "repository",
     "result_export",

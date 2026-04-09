@@ -16,7 +16,7 @@ from flask import (
 from flask_restx import Api, Resource, fields
 from trustme_api.api import ServerAPI
 from trustme_api.browser.dashboard.rest import dashboard_api
-from trustme_api.browser.surveys.rest import surveys_api
+from trustme_api.browser.surveys.controller import surveys_api
 from trustme_api.exceptions import BadRequest, Unauthorized
 from trustme_api.query.exceptions import QueryException
 from trustme_api.shared import schema
