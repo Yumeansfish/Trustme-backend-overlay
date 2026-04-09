@@ -117,6 +117,60 @@ def test_resolve_backend_overlay_feature_packages_use_overlay_entrypoints():
     )
 
 
+def test_resolve_backend_overlay_script_dependency_modules_use_overlay_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "backend_overlay.app.config": REPO_ROOT / "src" / "backend_overlay" / "app" / "config.py",
+        "backend_overlay.storage": REPO_ROOT / "src" / "backend_overlay" / "storage.py",
+        "backend_overlay.browser.canonical.repository": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "canonical"
+        / "repository.py",
+        "backend_overlay.browser.canonical.strategy": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "canonical"
+        / "strategy.py",
+        "backend_overlay.browser.canonical.units": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "canonical"
+        / "units.py",
+        "backend_overlay.browser.dashboard.scope_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "scope_service.py",
+        "backend_overlay.browser.snapshots.invalidation_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "invalidation_service.py",
+        "backend_overlay.browser.snapshots.warmup_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "snapshots"
+        / "warmup_service.py",
+        "backend_overlay.browser.surveys.sync": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "sync.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
