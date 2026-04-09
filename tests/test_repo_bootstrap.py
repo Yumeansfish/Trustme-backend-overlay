@@ -73,6 +73,30 @@ def test_resolve_backend_overlay_api_module_file_uses_overlay_entrypoint():
     assert resolved == REPO_ROOT / "src" / "backend_overlay" / "api.py"
 
 
+def test_resolve_backend_overlay_app_package_uses_overlay_entrypoint():
+    bootstrap = load_bootstrap_module()
+
+    resolved = bootstrap.resolve_module_file("backend_overlay.app", repo_root=REPO_ROOT)
+
+    assert resolved == REPO_ROOT / "src" / "backend_overlay" / "app" / "__init__.py"
+
+
+def test_resolve_backend_overlay_browser_package_uses_overlay_entrypoint():
+    bootstrap = load_bootstrap_module()
+
+    resolved = bootstrap.resolve_module_file("backend_overlay.browser", repo_root=REPO_ROOT)
+
+    assert resolved == REPO_ROOT / "src" / "backend_overlay" / "browser" / "__init__.py"
+
+
+def test_resolve_backend_overlay_dashboard_dto_module_uses_overlay_entrypoint():
+    bootstrap = load_bootstrap_module()
+
+    resolved = bootstrap.resolve_module_file("backend_overlay.browser.dashboard_dto", repo_root=REPO_ROOT)
+
+    assert resolved == REPO_ROOT / "src" / "backend_overlay" / "browser" / "dashboard_dto.py"
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
