@@ -16,7 +16,7 @@ from trustme_api.browser.snapshots.categories import (
     compile_category_rules,
     normalize_category_name,
 )
-from trustme_api.browser.snapshots.response import (
+from trustme_api.browser.snapshots.response_mapper import (
     build_snapshot_response,
     deserialize_segments,
     empty_summary_snapshot,

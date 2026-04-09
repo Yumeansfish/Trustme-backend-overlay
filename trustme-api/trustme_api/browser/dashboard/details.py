@@ -9,7 +9,7 @@ from trustme_api.browser.snapshots.models import (
     NumericInterval,
     duration_seconds,
 )
-from trustme_api.browser.snapshots.response import build_event_json
+from trustme_api.browser.snapshots.response_mapper import build_event_json
 from trustme_api.browser.snapshots.segments import (
     event_to_interval,
     fetch_events,

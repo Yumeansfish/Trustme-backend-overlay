@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from trustme_api.shared.dirs import get_data_dir
 
 from trustme_api.browser.snapshots.models import SummarySegment, datetime_to_ms
-from trustme_api.browser.snapshots.response import serialize_summary_segment
+from trustme_api.browser.snapshots.response_mapper import serialize_summary_segment
 
 
 CANONICAL_UNIT_STORE_SCHEMA_VERSION = 2

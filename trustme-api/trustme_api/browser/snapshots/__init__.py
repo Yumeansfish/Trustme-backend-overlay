@@ -3,6 +3,7 @@ __all__ = [
     "invalidation",
     "models",
     "response",
+    "response_mapper",
     "scope",
     "segments",
     "store",

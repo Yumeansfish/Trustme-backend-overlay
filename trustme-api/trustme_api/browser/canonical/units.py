@@ -18,7 +18,7 @@ from trustme_api.browser.snapshots.models import (
     SummarySegment,
     datetime_to_ms,
 )
-from trustme_api.browser.snapshots.response import (
+from trustme_api.browser.snapshots.response_mapper import (
     build_snapshot_response,
     merge_summary_segments,
 )
