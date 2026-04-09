@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -34,7 +35,7 @@ def test_legacy_paths_are_derived_from_repo_root():
     assert bootstrap.legacy_package_root(repo_root=REPO_ROOT) == REPO_ROOT / "trustme-api" / "trustme_api"
 
 
-def test_ensure_repo_import_paths_adds_src_before_legacy_root():
+def test_ensure_repo_import_paths_only_adds_src_root():
     bootstrap = load_bootstrap_module()
 
     original_sys_path = list(sys.path)
@@ -43,7 +44,7 @@ def test_ensure_repo_import_paths_adds_src_before_legacy_root():
         bootstrap.ensure_repo_import_paths(repo_root=REPO_ROOT)
 
         assert sys.path[0] == str(REPO_ROOT / "src")
-        assert sys.path[1] == str(REPO_ROOT / "trustme-api")
+        assert str(REPO_ROOT / "trustme-api") not in sys.path
     finally:
         sys.path[:] = original_sys_path
 
@@ -54,3 +55,26 @@ def test_resolve_module_file_uses_import_spec_without_importing_dependencies():
     resolved = bootstrap.resolve_module_file("trustme_api.main", repo_root=REPO_ROOT)
 
     assert resolved == REPO_ROOT / "trustme-api" / "trustme_api" / "main.py"
+
+
+def test_trustme_api_import_works_with_only_src_on_sys_path():
+    script = f"""
+import sys
+from pathlib import Path
+repo_root = Path({str(REPO_ROOT)!r})
+sys.path = [str(repo_root / "src")] + [entry for entry in sys.path if entry not in {{str(repo_root / "src"), str(repo_root / "trustme-api")}}]
+import trustme_api
+from trustme_api.browser.settings import schema
+print(trustme_api.__file__)
+print(schema.__file__)
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    output_lines = completed.stdout.strip().splitlines()
+
+    assert output_lines[0].endswith("src/trustme_api/__init__.py")
+    assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")

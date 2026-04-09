@@ -14,7 +14,7 @@ authors = [{ name = "Trust-me" }]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-where = ["src", "trustme-api"]
+where = ["src"]
 include = ["backend_overlay*", "trustme_api*"]
 
 [tool.setuptools.package-data]

@@ -35,7 +35,6 @@ def ensure_repo_import_paths(*, repo_root: Path | None = None) -> Path:
     resolved_root = repo_root or discover_repo_root()
     import_roots = [
         resolved_root / "src",
-        legacy_source_root(repo_root=resolved_root),
     ]
 
     for path in reversed(import_roots):
