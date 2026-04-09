@@ -26,7 +26,8 @@ def test_backend_overlay_exposes_trustme_api_metadata():
 
 
 def test_backend_overlay_namespace_resolves_existing_subpackages():
-    assert overlay_schema.__file__ == trustme_schema.__file__
+    assert overlay_schema.__file__.endswith("src/backend_overlay/browser/settings/schema.py")
+    assert overlay_schema.normalize_settings_data is trustme_schema.normalize_settings_data
 
 
 def test_backend_overlay_subpackage_shims_preserve_own_package_roots():

@@ -187,6 +187,124 @@ def test_resolve_backend_overlay_runtime_entrypoints_use_overlay_shims():
         assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
 
 
+def test_resolve_backend_overlay_primary_feature_modules_use_overlay_shims():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "backend_overlay.browser.dashboard.checkins_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "checkins_service.py",
+        "backend_overlay.browser.dashboard.controller": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "controller.py",
+        "backend_overlay.browser.dashboard.details_service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "details_service.py",
+        "backend_overlay.browser.dashboard.dto": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "dto.py",
+        "backend_overlay.browser.dashboard.public_names": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "public_names.py",
+        "backend_overlay.browser.dashboard.repository": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "repository.py",
+        "backend_overlay.browser.dashboard.service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "dashboard"
+        / "service.py",
+        "backend_overlay.browser.settings.repository": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "settings"
+        / "repository.py",
+        "backend_overlay.browser.settings.schema": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "settings"
+        / "schema.py",
+        "backend_overlay.browser.settings.service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "settings"
+        / "service.py",
+        "backend_overlay.browser.surveys.controller": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "controller.py",
+        "backend_overlay.browser.surveys.dto": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "dto.py",
+        "backend_overlay.browser.surveys.remote_config": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "remote_config.py",
+        "backend_overlay.browser.surveys.remote_sync": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "remote_sync.py",
+        "backend_overlay.browser.surveys.repository": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "repository.py",
+        "backend_overlay.browser.surveys.result_export": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "result_export.py",
+        "backend_overlay.browser.surveys.service": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "service.py",
+        "backend_overlay.browser.surveys.survey_template": REPO_ROOT
+        / "src"
+        / "backend_overlay"
+        / "browser"
+        / "surveys"
+        / "survey_template.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
