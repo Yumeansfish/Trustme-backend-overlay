@@ -1,0 +1,6 @@
+from trustme_api.browser.surveys.remote_sync import sync_missing_remote_videos
+from trustme_api.browser.surveys.sync import sync_missing_remote_videos as legacy_sync_missing_remote_videos
+
+
+def test_sync_shim_reexports_remote_sync():
+    assert legacy_sync_missing_remote_videos is sync_missing_remote_videos
