@@ -9,6 +9,8 @@ import backend_overlay.browser.dashboard as overlay_dashboard
 import backend_overlay.browser.settings as overlay_settings
 import backend_overlay.browser.snapshots as overlay_snapshots
 import backend_overlay.browser.surveys as overlay_surveys
+import backend_overlay.query as overlay_query
+import backend_overlay.shared as overlay_shared
 import trustme_api
 import trustme_api.app as trustme_app
 import trustme_api.browser as trustme_browser
@@ -17,12 +19,18 @@ import trustme_api.browser.dashboard as trustme_dashboard
 import trustme_api.browser.settings as trustme_settings
 import trustme_api.browser.snapshots as trustme_snapshots
 import trustme_api.browser.surveys as trustme_surveys
+import trustme_api.query as trustme_query
+import trustme_api.shared as trustme_shared
 
 from backend_overlay.browser.surveys import survey_template as overlay_survey_template
 from backend_overlay.browser.settings import schema as overlay_schema
+from backend_overlay.query.exceptions import QueryException as overlay_query_exception
+from backend_overlay.shared.dirs import get_data_dir as overlay_get_data_dir
 from trustme_api_legacy.browser.settings import schema as legacy_schema
 from trustme_api.browser.surveys import survey_template as trustme_survey_template
 from trustme_api.browser.settings import schema as trustme_schema
+from trustme_api.query.exceptions import QueryException as trustme_query_exception
+from trustme_api.shared.dirs import get_data_dir as trustme_get_data_dir
 
 
 def test_backend_overlay_exposes_trustme_api_metadata():
@@ -57,6 +65,10 @@ def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_canonical.__path__)[1:] == list(trustme_canonical.__path__)
     assert list(overlay_snapshots.__path__)[0].endswith("src/backend_overlay/browser/snapshots")
     assert list(overlay_snapshots.__path__)[1:] == list(trustme_snapshots.__path__)
+    assert list(overlay_shared.__path__)[0].endswith("src/backend_overlay/shared")
+    assert list(overlay_shared.__path__)[1:] == list(trustme_shared.__path__)
+    assert list(overlay_query.__path__)[0].endswith("src/backend_overlay/query")
+    assert list(overlay_query.__path__)[1:] == list(trustme_query.__path__)
 
 
 def test_backend_overlay_browser_shims_use_internal_legacy_bridge():
@@ -88,3 +100,10 @@ def test_pyproject_declares_overlay_package_data_entries():
 
     assert package_data["backend_overlay.browser.settings"] == ["*.json"]
     assert package_data["backend_overlay.browser.surveys"] == ["*.json"]
+
+
+def test_backend_overlay_shared_and_query_shims_use_upstream_aw_core_modules():
+    assert overlay_get_data_dir.__module__ == "aw_core.dirs"
+    assert trustme_get_data_dir.__module__ == "aw_core.dirs"
+    assert overlay_query_exception.__module__ == "aw_query.exceptions"
+    assert trustme_query_exception.__module__ == "aw_query.exceptions"

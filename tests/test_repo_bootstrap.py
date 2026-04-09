@@ -195,6 +195,26 @@ def test_resolve_backend_overlay_runtime_entrypoints_use_overlay_shims():
         "backend_overlay.app.log": REPO_ROOT / "src" / "backend_overlay" / "app" / "log.py",
         "backend_overlay.app.rest": REPO_ROOT / "src" / "backend_overlay" / "app" / "rest.py",
         "backend_overlay.app.server": REPO_ROOT / "src" / "backend_overlay" / "app" / "server.py",
+        "backend_overlay.transform": REPO_ROOT / "src" / "backend_overlay" / "transform.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
+def test_resolve_backend_overlay_shared_and_query_modules_use_overlay_shims():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "backend_overlay.shared": REPO_ROOT / "src" / "backend_overlay" / "shared" / "__init__.py",
+        "backend_overlay.shared.config": REPO_ROOT / "src" / "backend_overlay" / "shared" / "config.py",
+        "backend_overlay.shared.dirs": REPO_ROOT / "src" / "backend_overlay" / "shared" / "dirs.py",
+        "backend_overlay.shared.log": REPO_ROOT / "src" / "backend_overlay" / "shared" / "log.py",
+        "backend_overlay.shared.models": REPO_ROOT / "src" / "backend_overlay" / "shared" / "models.py",
+        "backend_overlay.shared.schema": REPO_ROOT / "src" / "backend_overlay" / "shared" / "schema.py",
+        "backend_overlay.query": REPO_ROOT / "src" / "backend_overlay" / "query" / "__init__.py",
+        "backend_overlay.query.exceptions": REPO_ROOT / "src" / "backend_overlay" / "query" / "exceptions.py",
+        "backend_overlay.query.query2": REPO_ROOT / "src" / "backend_overlay" / "query" / "query2.py",
     }
 
     for module_name, expected_path in expected.items():
