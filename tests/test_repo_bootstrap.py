@@ -171,6 +171,22 @@ def test_resolve_backend_overlay_script_dependency_modules_use_overlay_entrypoin
         assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
 
 
+def test_resolve_backend_overlay_runtime_entrypoints_use_overlay_shims():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "backend_overlay.__about__": REPO_ROOT / "src" / "backend_overlay" / "__about__.py",
+        "backend_overlay.exceptions": REPO_ROOT / "src" / "backend_overlay" / "exceptions.py",
+        "backend_overlay.app.custom_static": REPO_ROOT / "src" / "backend_overlay" / "app" / "custom_static.py",
+        "backend_overlay.app.log": REPO_ROOT / "src" / "backend_overlay" / "app" / "log.py",
+        "backend_overlay.app.rest": REPO_ROOT / "src" / "backend_overlay" / "app" / "rest.py",
+        "backend_overlay.app.server": REPO_ROOT / "src" / "backend_overlay" / "app" / "server.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
 def test_trustme_api_import_works_with_only_src_on_sys_path():
     script = f"""
 import sys
