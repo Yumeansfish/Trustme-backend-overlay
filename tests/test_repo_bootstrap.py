@@ -19,6 +19,20 @@ def load_bootstrap_module():
     return module
 
 
+def test_every_repo_local_module_has_backend_overlay_counterpart():
+    legacy_root = REPO_ROOT / "trustme-api" / "trustme_api"
+    overlay_root = REPO_ROOT / "src" / "backend_overlay"
+
+    missing = []
+    for legacy_module in sorted(legacy_root.rglob("*.py")):
+        relative_path = legacy_module.relative_to(legacy_root)
+        overlay_module = overlay_root / relative_path
+        if not overlay_module.exists():
+            missing.append(str(relative_path))
+
+    assert missing == []
+
+
 def test_discover_repo_root_uses_repo_markers():
     bootstrap = load_bootstrap_module()
 
