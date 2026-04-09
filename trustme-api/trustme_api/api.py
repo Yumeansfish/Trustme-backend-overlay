@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import iso8601
 from trustme_api.__about__ import __version__
-from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore
+from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository
 from trustme_api.browser.dashboard.api_facade import DashboardAPI
 from trustme_api.browser.dashboard.availability_store import DashboardAvailabilityStore
 from trustme_api.browser.dashboard.domain_service import (
@@ -87,7 +87,7 @@ class ServerAPI:
         self.testing = testing
         self.last_event = {}  # type: dict
         self.summary_snapshot_store = SummarySnapshotStore(testing=testing)
-        self.canonical_unit_store = SqliteCanonicalUnitStore(testing=testing)
+        self.canonical_unit_store = SqliteCanonicalUnitRepository(testing=testing)
         self.dashboard_availability_store = DashboardAvailabilityStore(testing=testing)
         self.survey_answer_store = SurveyAnswerStore(testing=testing)
         self.dashboard = DashboardAPI(

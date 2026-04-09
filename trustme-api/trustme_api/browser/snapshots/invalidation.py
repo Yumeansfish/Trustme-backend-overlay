@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore
+from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository
 from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS
 from trustme_api.browser.canonical.units import (
     build_calendar_profile,
@@ -137,7 +137,7 @@ def invalidate_summary_snapshots_for_settings(
 
 def invalidate_canonical_units_for_bucket_time_range(
     *,
-    store: SqliteCanonicalUnitStore,
+    store: SqliteCanonicalUnitRepository,
     settings_data: Dict[str, Any],
     bucket_records: List[Dict[str, Any]],
     bucket_id: str,
@@ -173,7 +173,7 @@ def invalidate_canonical_units_for_bucket_time_range(
 
 def invalidate_canonical_units_for_settings(
     *,
-    store: SqliteCanonicalUnitStore,
+    store: SqliteCanonicalUnitRepository,
     previous_settings_data: Dict[str, Any],
     settings_data: Dict[str, Any],
     bucket_records: List[Dict[str, Any]],
@@ -242,7 +242,7 @@ def _target_period_map(targets: List[Dict[str, Any]]) -> Dict[str, set[str]]:
 
 def _invalidate_canonical_units_for_period_map(
     *,
-    store: SqliteCanonicalUnitStore,
+    store: SqliteCanonicalUnitRepository,
     calendar_key: str,
     period_map: Dict[str, set[str]],
 ) -> int:

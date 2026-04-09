@@ -12,7 +12,7 @@ sys.path.insert(0, str(REPO_ROOT / "trustme-api"))
 
 from trustme_api.api import ServerAPI  # noqa: E402
 from trustme_api.app.config import config  # noqa: E402
-from trustme_api.browser.canonical.store import SqliteCanonicalUnitStore  # noqa: E402
+from trustme_api.browser.canonical.repository import SqliteCanonicalUnitRepository  # noqa: E402
 from trustme_api.browser.canonical.strategy import PERSISTED_UNIT_KINDS  # noqa: E402
 from trustme_api.browser.canonical.units import (  # noqa: E402
     ExperimentalCanonicalQueryEngine,
@@ -98,7 +98,7 @@ def main() -> None:
     if not scopes:
         raise ValueError("No dashboard scopes available for the requested benchmark filters")
 
-    shared_store = SqliteCanonicalUnitStore(
+    shared_store = SqliteCanonicalUnitRepository(
         testing=args.testing,
         path=Path(args.store_path) if args.store_path else None,
     )
