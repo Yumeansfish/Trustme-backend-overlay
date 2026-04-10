@@ -19,15 +19,15 @@ def load_bootstrap_module():
     return module
 
 
-def test_every_repo_local_module_has_backend_overlay_counterpart():
-    legacy_root = REPO_ROOT / "trustme-api" / "trustme_api"
+def test_every_backend_overlay_module_has_public_trustme_api_counterpart():
     overlay_root = REPO_ROOT / "src" / "backend_overlay"
+    public_root = REPO_ROOT / "src" / "trustme_api"
 
     missing = []
-    for legacy_module in sorted(legacy_root.rglob("*.py")):
-        relative_path = legacy_module.relative_to(legacy_root)
-        overlay_module = overlay_root / relative_path
-        if not overlay_module.exists():
+    for overlay_module in sorted(overlay_root.rglob("*.py")):
+        relative_path = overlay_module.relative_to(overlay_root)
+        public_module = public_root / relative_path
+        if not public_module.exists():
             missing.append(str(relative_path))
 
     assert missing == []
@@ -713,13 +713,13 @@ def test_resolve_trustme_api_legacy_feature_packages_use_src_entrypoints():
 
 def test_resolve_trustme_api_legacy_browser_modules_use_src_entrypoints():
     bootstrap = load_bootstrap_module()
-    legacy_browser_root = REPO_ROOT / "trustme-api" / "trustme_api" / "browser"
+    overlay_browser_root = REPO_ROOT / "src" / "backend_overlay" / "browser"
     legacy_shim_root = REPO_ROOT / "src" / "trustme_api_legacy" / "browser"
 
     missing = []
     mismatched = []
-    for legacy_module in sorted(legacy_browser_root.rglob("*.py")):
-        relative_path = legacy_module.relative_to(legacy_browser_root)
+    for overlay_module in sorted(overlay_browser_root.rglob("*.py")):
+        relative_path = overlay_module.relative_to(overlay_browser_root)
         if relative_path.name == "__init__.py":
             continue
 

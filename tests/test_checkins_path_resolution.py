@@ -27,7 +27,7 @@ def _module_path(tmp_path: Path) -> Path:
     (repo_root / "scripts").mkdir(parents=True)
     (repo_root / "scripts" / "_repo_bootstrap.py").write_text("# marker\n", encoding="utf-8")
     (repo_root / "pyproject.toml").write_text("[project]\nname='test'\n", encoding="utf-8")
-    return repo_root / "trustme-api" / "trustme_api" / "browser" / "dashboard" / "checkins.py"
+    return repo_root / "src" / "backend_overlay" / "browser" / "dashboard" / "checkins_service.py"
 
 
 def test_checkins_candidates_follow_env_package_runtime_order(tmp_path: Path, monkeypatch) -> None:
