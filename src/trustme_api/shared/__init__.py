@@ -7,7 +7,7 @@ import backend_overlay.shared as _overlay_shared
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_shared, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_shared.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

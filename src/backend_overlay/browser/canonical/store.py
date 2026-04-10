@@ -1,13 +1,11 @@
-from __future__ import annotations
+from backend_overlay.browser.canonical.repository import (
+    CANONICAL_UNIT_STORE_SCHEMA_VERSION,
+    SqliteCanonicalUnitRepository,
+    SqliteCanonicalUnitStore,
+)
 
-import trustme_api_legacy.browser.canonical.store as _legacy_store
-
-__all__ = getattr(_legacy_store, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_store, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_store)))
+__all__ = [
+    "CANONICAL_UNIT_STORE_SCHEMA_VERSION",
+    "SqliteCanonicalUnitRepository",
+    "SqliteCanonicalUnitStore",
+]

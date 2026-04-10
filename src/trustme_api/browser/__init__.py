@@ -7,7 +7,7 @@ import backend_overlay.browser as _overlay_browser
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_browser, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_browser.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

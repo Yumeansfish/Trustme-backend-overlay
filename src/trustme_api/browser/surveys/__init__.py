@@ -7,7 +7,7 @@ import backend_overlay.browser.surveys as _overlay_surveys
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_surveys, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_surveys.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

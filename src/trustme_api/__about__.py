@@ -1,13 +1,5 @@
 from __future__ import annotations
 
-import backend_overlay.__about__ as _overlay_about
+from trustme_api._module_alias import bind_overlay_module
 
-__all__ = getattr(_overlay_about, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_overlay_about, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_overlay_about)))
+bind_overlay_module(globals(), "backend_overlay.__about__")

@@ -1,19 +1,14 @@
-from __future__ import annotations
+from backend_overlay.__about__ import __version__
 
-from pathlib import Path
-
-import trustme_api_legacy as _trustme_api
-
-PACKAGE_ROOT = Path(__file__).resolve().parent
-
-__all__ = getattr(_trustme_api, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_trustme_api.__path__)]
-__version__ = _trustme_api.__version__
+__all__ = [
+    "__version__",
+    "main",
+]
 
 
 def __getattr__(name):
-    return getattr(_trustme_api, name)
+    if name == "main":
+        from backend_overlay.main import main
 
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_trustme_api)))
+        return main
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

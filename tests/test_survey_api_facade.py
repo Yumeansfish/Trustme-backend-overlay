@@ -3,8 +3,16 @@ from pathlib import Path
 import pytest
 
 from trustme_api.browser.surveys.answer_store import SurveyAnswerStore
+import trustme_api.browser.surveys.api_facade as survey_api_facade
 from trustme_api.browser.surveys.api_facade import SurveyAPI
 from trustme_api.browser.surveys.questionnaire import load_fixed_survey_template
+
+
+def _patch_api_facade(monkeypatch: pytest.MonkeyPatch, name: str, value) -> None:
+    monkeypatch.setattr(survey_api_facade, name, value)
+    overlay_module = getattr(survey_api_facade, "_overlay_module", None)
+    if overlay_module is not None:
+        monkeypatch.setattr(overlay_module, name, value)
 
 
 def _full_video_answers(*, video_id: str):
@@ -36,10 +44,7 @@ def test_submit_answers_marks_multi_video_survey_completed(tmp_path: Path, monke
     (tmp_path / "2025-06-17T09-02-20.mov").write_bytes(b"video")
     (tmp_path / "2025-06-17T20-15-45.mov").write_bytes(b"video")
 
-    monkeypatch.setattr(
-        "trustme_api.browser.surveys.api_facade.default_survey_video_cache_dir",
-        lambda: tmp_path,
-    )
+    _patch_api_facade(monkeypatch, "default_survey_video_cache_dir", lambda: tmp_path)
 
     store = SurveyAnswerStore(testing=True, path=tmp_path / "survey-answers.json")
     captured_rows = []
@@ -74,10 +79,7 @@ def test_submit_answers_rejects_incomplete_video_coverage(tmp_path: Path, monkey
     (tmp_path / "2025-06-17T09-02-20.mov").write_bytes(b"video")
     (tmp_path / "2025-06-17T20-15-45.mov").write_bytes(b"video")
 
-    monkeypatch.setattr(
-        "trustme_api.browser.surveys.api_facade.default_survey_video_cache_dir",
-        lambda: tmp_path,
-    )
+    _patch_api_facade(monkeypatch, "default_survey_video_cache_dir", lambda: tmp_path)
 
     store = SurveyAnswerStore(testing=True, path=tmp_path / "survey-answers.json")
     api = SurveyAPI(answer_store=store, result_csv_writer=lambda rows: None)
@@ -99,10 +101,7 @@ def test_submit_answers_returns_existing_completion_without_rewriting_results(
     (tmp_path / "2025-06-17T09-02-20.mov").write_bytes(b"video")
     (tmp_path / "2025-06-17T20-15-45.mov").write_bytes(b"video")
 
-    monkeypatch.setattr(
-        "trustme_api.browser.surveys.api_facade.default_survey_video_cache_dir",
-        lambda: tmp_path,
-    )
+    _patch_api_facade(monkeypatch, "default_survey_video_cache_dir", lambda: tmp_path)
 
     store = SurveyAnswerStore(testing=True, path=tmp_path / "survey-answers.json")
     submitted = store.mark_completed(

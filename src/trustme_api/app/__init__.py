@@ -7,7 +7,7 @@ import backend_overlay.app as _overlay_app
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_app, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_app.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

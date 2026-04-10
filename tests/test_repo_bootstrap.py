@@ -565,7 +565,7 @@ print(list(trustme_api.__path__))
     assert output_lines[1].endswith("src/trustme_api/browser/__init__.py")
     assert output_lines[2].endswith("src/trustme_api/shared/__init__.py")
     assert output_lines[3].endswith("src/trustme_api/query/__init__.py")
-    assert output_lines[4].endswith("src/backend_overlay/browser/settings/schema.py")
+    assert output_lines[4].endswith("src/trustme_api/browser/settings/schema.py")
     assert "trustme-api/trustme_api" not in output_lines[5]
 
 

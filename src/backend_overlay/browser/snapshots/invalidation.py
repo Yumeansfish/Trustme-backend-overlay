@@ -1,13 +1,21 @@
-from __future__ import annotations
+from backend_overlay.browser.snapshots.invalidation_service import (
+    build_snapshot_invalidation_targets,
+    build_snapshot_invalidation_targets_for_settings_change,
+    build_snapshot_targets_from_jobs,
+    diff_snapshot_targets,
+    invalidate_canonical_units_for_bucket_time_range,
+    invalidate_canonical_units_for_settings,
+    invalidate_summary_snapshots_for_settings,
+    invalidate_summary_snapshots_for_targets,
+)
 
-import trustme_api_legacy.browser.snapshots.invalidation as _legacy_invalidation
-
-__all__ = getattr(_legacy_invalidation, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_invalidation, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_invalidation)))
+__all__ = [
+    "build_snapshot_invalidation_targets",
+    "build_snapshot_invalidation_targets_for_settings_change",
+    "build_snapshot_targets_from_jobs",
+    "diff_snapshot_targets",
+    "invalidate_canonical_units_for_bucket_time_range",
+    "invalidate_canonical_units_for_settings",
+    "invalidate_summary_snapshots_for_settings",
+    "invalidate_summary_snapshots_for_targets",
+]

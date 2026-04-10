@@ -1,13 +1,17 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.checkins_service import (
+    CHECKIN_SESSION_GAP,
+    CHECKIN_TIMELINE_LOOKAROUND,
+    CheckinPair,
+    QUESTION_META,
+    build_checkins_payload,
+    resolve_checkins_data_dir,
+)
 
-import trustme_api_legacy.browser.dashboard.checkins as _legacy_checkins
-
-__all__ = getattr(_legacy_checkins, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_checkins, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_checkins)))
+__all__ = [
+    "CHECKIN_SESSION_GAP",
+    "CHECKIN_TIMELINE_LOOKAROUND",
+    "CheckinPair",
+    "QUESTION_META",
+    "build_checkins_payload",
+    "resolve_checkins_data_dir",
+]

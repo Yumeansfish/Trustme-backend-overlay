@@ -1,13 +1,17 @@
-from __future__ import annotations
+from backend_overlay.browser.snapshots.response_mapper import (
+    build_event_json,
+    build_snapshot_response,
+    deserialize_segments,
+    empty_summary_snapshot,
+    merge_summary_segments,
+    serialize_summary_segment,
+)
 
-import trustme_api_legacy.browser.snapshots.response as _legacy_response
-
-__all__ = getattr(_legacy_response, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_response, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_response)))
+__all__ = [
+    "build_event_json",
+    "build_snapshot_response",
+    "deserialize_segments",
+    "empty_summary_snapshot",
+    "merge_summary_segments",
+    "serialize_summary_segment",
+]

@@ -7,7 +7,7 @@ import backend_overlay.query as _overlay_query
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_query, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_query.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

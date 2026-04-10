@@ -7,7 +7,7 @@ import backend_overlay.browser.snapshots as _overlay_snapshots
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 __all__ = getattr(_overlay_snapshots, "__all__", [])
-__path__ = [str(PACKAGE_ROOT), *list(_overlay_snapshots.__path__)]
+__path__ = [str(PACKAGE_ROOT)]
 
 
 def __getattr__(name):

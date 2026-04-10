@@ -1,13 +1,38 @@
 from __future__ import annotations
 
-import trustme_api_legacy.browser.settings.repository as _legacy_repository
+import json
+from pathlib import Path
+from typing import Any, Dict
 
-__all__ = getattr(_legacy_repository, "__all__", [])
+try:
+    from backend_overlay.shared.dirs import get_config_dir
+except ModuleNotFoundError:  # pragma: no cover - overlay-only fallback
+    def get_config_dir(appname: str) -> str:
+        fallback = Path.home() / ".config" / appname
+        fallback.mkdir(parents=True, exist_ok=True)
+        return str(fallback)
 
 
-def __getattr__(name):
-    return getattr(_legacy_repository, name)
+def default_settings_path(*, testing: bool) -> Path:
+    filename = "settings.json" if not testing else "settings-testing.json"
+    return Path(get_config_dir("aw-server")) / filename
 
 
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_repository)))
+class SettingsRepository:
+    def __init__(self, *, testing: bool, path: Path | None = None) -> None:
+        self.path = path or default_settings_path(testing=testing)
+
+    def exists(self) -> bool:
+        return self.path.exists()
+
+    def load_data(self) -> Dict[str, Any]:
+        if not self.exists():
+            return {}
+
+        with self.path.open() as handle:
+            return json.load(handle)
+
+    def save_data(self, payload: Dict[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("w") as handle:
+            json.dump(payload, handle, indent=4)

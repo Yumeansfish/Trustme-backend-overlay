@@ -1,13 +1,17 @@
-from __future__ import annotations
+from backend_overlay.browser.surveys.result_export import (
+    REMOTE_APPEND_SCRIPT,
+    RESULT_CSV_HEADER,
+    append_rows_to_remote_result_csv,
+    build_result_csv_rows,
+    default_result_csv_remote_host,
+    default_result_csv_remote_path,
+)
 
-import trustme_api_legacy.browser.surveys.result_csv as _legacy_result_csv
-
-__all__ = getattr(_legacy_result_csv, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_result_csv, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_result_csv)))
+__all__ = [
+    "REMOTE_APPEND_SCRIPT",
+    "RESULT_CSV_HEADER",
+    "append_rows_to_remote_result_csv",
+    "build_result_csv_rows",
+    "default_result_csv_remote_host",
+    "default_result_csv_remote_path",
+]

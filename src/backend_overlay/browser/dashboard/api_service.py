@@ -1,13 +1,13 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.service import (
+    build_dashboard_details_response,
+    build_dashboard_scope_response,
+    build_default_dashboard_hosts_response,
+    build_summary_snapshot_response,
+)
 
-import trustme_api_legacy.browser.dashboard.api_service as _legacy_api_service
-
-__all__ = getattr(_legacy_api_service, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_api_service, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_api_service)))
+__all__ = [
+    "build_dashboard_details_response",
+    "build_dashboard_scope_response",
+    "build_default_dashboard_hosts_response",
+    "build_summary_snapshot_response",
+]

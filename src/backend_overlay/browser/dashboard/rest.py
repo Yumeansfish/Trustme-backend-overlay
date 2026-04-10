@@ -1,13 +1,17 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.controller import (
+    CheckinsResource,
+    DashboardDefaultHostsResource,
+    DashboardDetailsResource,
+    DashboardScopeResource,
+    SummarySnapshotResource,
+    dashboard_api,
+)
 
-import trustme_api_legacy.browser.dashboard.rest as _legacy_rest
-
-__all__ = getattr(_legacy_rest, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_rest, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_rest)))
+__all__ = [
+    "CheckinsResource",
+    "DashboardDefaultHostsResource",
+    "DashboardDetailsResource",
+    "DashboardScopeResource",
+    "SummarySnapshotResource",
+    "dashboard_api",
+]

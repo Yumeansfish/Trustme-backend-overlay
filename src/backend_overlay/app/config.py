@@ -1,13 +1,21 @@
-from __future__ import annotations
+from backend_overlay.shared.config import load_config_toml
 
-import trustme_api_legacy.app.config as _legacy_config
+default_config = """
+[server]
+host = "localhost"
+port = "5600"
+storage = "peewee"
+cors_origins = ""
 
-__all__ = getattr(_legacy_config, "__all__", [])
+[server.custom_static]
 
+[server-testing]
+host = "localhost"
+port = "5666"
+storage = "peewee"
+cors_origins = ""
 
-def __getattr__(name):
-    return getattr(_legacy_config, name)
+[server-testing.custom_static]
+""".strip()
 
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_config)))
+config = load_config_toml("aw-server", default_config)

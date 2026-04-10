@@ -1,13 +1,19 @@
-from __future__ import annotations
-
-import trustme_api_legacy.exceptions as _legacy_exceptions
-
-__all__ = getattr(_legacy_exceptions, "__all__", [])
+import werkzeug.exceptions
 
 
-def __getattr__(name):
-    return getattr(_legacy_exceptions, name)
+class BadRequest(werkzeug.exceptions.BadRequest):
+    def __init__(self, type: str, message: str) -> None:
+        super().__init__(message)
+        self.type = type
 
 
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_exceptions)))
+class NotFound(werkzeug.exceptions.NotFound):
+    def __init__(self, type: str, message: str) -> None:
+        super().__init__(message)
+        self.type = type
+
+
+class Unauthorized(werkzeug.exceptions.Unauthorized):
+    def __init__(self, type: str, message: str) -> None:
+        super().__init__(message)
+        self.type = type

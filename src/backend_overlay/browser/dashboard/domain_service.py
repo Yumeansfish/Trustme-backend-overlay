@@ -1,13 +1,29 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.scope_service import (
+    DashboardDefaultScope,
+    DashboardResolvedScope,
+    DashboardSummaryScope,
+    build_ad_hoc_summary_scope,
+    build_bucket_records,
+    build_dashboard_summary_scopes,
+    build_settings_backed_summary_scope,
+    resolve_default_dashboard_hosts,
+    resolve_default_dashboard_scope,
+    resolve_dashboard_scope,
+    resolve_group_names_for_host,
+    resolve_logical_days_for_range,
+)
 
-import trustme_api_legacy.browser.dashboard.domain_service as _legacy_domain_service
-
-__all__ = getattr(_legacy_domain_service, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_domain_service, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_domain_service)))
+__all__ = [
+    "DashboardDefaultScope",
+    "DashboardResolvedScope",
+    "DashboardSummaryScope",
+    "build_ad_hoc_summary_scope",
+    "build_bucket_records",
+    "build_dashboard_summary_scopes",
+    "build_settings_backed_summary_scope",
+    "resolve_default_dashboard_hosts",
+    "resolve_default_dashboard_scope",
+    "resolve_dashboard_scope",
+    "resolve_group_names_for_host",
+    "resolve_logical_days_for_range",
+]

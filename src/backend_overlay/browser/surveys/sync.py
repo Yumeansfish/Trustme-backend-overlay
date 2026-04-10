@@ -1,13 +1,33 @@
-from __future__ import annotations
+from backend_overlay.browser.surveys.remote_sync import (
+    _build_remote_find_command,
+    ALLOWED_VIDEO_SUFFIXES,
+    REMOTE_DELETE_SCRIPT,
+    RemoteSurveyVideo,
+    SurveyVideoSyncResult,
+    cleanup_submitted_survey_videos,
+    copy_remote_survey_video,
+    default_survey_video_cache_dir,
+    default_survey_video_remote_dir,
+    default_survey_video_remote_host,
+    delete_local_survey_videos,
+    delete_remote_survey_videos,
+    list_remote_survey_videos,
+    sync_missing_remote_videos,
+)
 
-import trustme_api_legacy.browser.surveys.sync as _legacy_sync
-
-__all__ = getattr(_legacy_sync, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_sync, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_sync)))
+__all__ = [
+    "_build_remote_find_command",
+    "ALLOWED_VIDEO_SUFFIXES",
+    "REMOTE_DELETE_SCRIPT",
+    "RemoteSurveyVideo",
+    "SurveyVideoSyncResult",
+    "cleanup_submitted_survey_videos",
+    "copy_remote_survey_video",
+    "default_survey_video_cache_dir",
+    "default_survey_video_remote_dir",
+    "default_survey_video_remote_host",
+    "delete_local_survey_videos",
+    "delete_remote_survey_videos",
+    "list_remote_survey_videos",
+    "sync_missing_remote_videos",
+]

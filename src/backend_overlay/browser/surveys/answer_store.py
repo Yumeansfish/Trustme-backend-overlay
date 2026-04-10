@@ -1,13 +1,17 @@
-from __future__ import annotations
+from backend_overlay.browser.surveys.repository import (
+    SURVEY_ANSWER_STORE_VERSION,
+    StoredSurveyAnswer,
+    StoredSurveySubmission,
+    StoredSurveyVideoAnswers,
+    SurveyAnswerRepository,
+    SurveyAnswerStore,
+)
 
-import trustme_api_legacy.browser.surveys.answer_store as _legacy_answer_store
-
-__all__ = getattr(_legacy_answer_store, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_answer_store, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_answer_store)))
+__all__ = [
+    "SURVEY_ANSWER_STORE_VERSION",
+    "StoredSurveyAnswer",
+    "StoredSurveySubmission",
+    "StoredSurveyVideoAnswers",
+    "SurveyAnswerRepository",
+    "SurveyAnswerStore",
+]

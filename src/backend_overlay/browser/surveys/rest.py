@@ -1,13 +1,13 @@
-from __future__ import annotations
+from backend_overlay.browser.surveys.controller import (
+    SurveyAnswersResource,
+    SurveyVideoResource,
+    SurveysResource,
+    surveys_api,
+)
 
-import trustme_api_legacy.browser.surveys.rest as _legacy_rest
-
-__all__ = getattr(_legacy_rest, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_rest, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_rest)))
+__all__ = [
+    "SurveyAnswersResource",
+    "SurveyVideoResource",
+    "SurveysResource",
+    "surveys_api",
+]

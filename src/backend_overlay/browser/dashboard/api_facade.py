@@ -1,13 +1,3 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.service import DashboardAPI
 
-import trustme_api_legacy.browser.dashboard.api_facade as _legacy_api_facade
-
-__all__ = getattr(_legacy_api_facade, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_api_facade, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_api_facade)))
+__all__ = ["DashboardAPI"]

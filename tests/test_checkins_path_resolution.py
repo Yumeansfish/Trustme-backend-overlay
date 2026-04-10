@@ -9,6 +9,9 @@ def _patch_checkins_get_data_dir(monkeypatch, provider) -> None:
     legacy_module = getattr(checkins, "_legacy_checkins_service", None)
     if legacy_module is not None:
         modules.append(legacy_module)
+    overlay_module = getattr(checkins, "_overlay_module", None)
+    if overlay_module is not None:
+        modules.append(overlay_module)
 
     for module in list(modules):
         load_legacy_module = getattr(module, "_legacy_module", None)

@@ -1,13 +1,18 @@
-from __future__ import annotations
+from backend_overlay.browser.dashboard.details_service import (
+    BROWSER_APPNAME_REGEX,
+    build_browser_summary,
+    build_dashboard_details,
+    build_stopwatch_summary,
+    empty_browser_summary,
+    empty_stopwatch_summary,
+)
 
-import trustme_api_legacy.browser.dashboard.details as _legacy_details
 
-__all__ = getattr(_legacy_details, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_details, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_details)))
+__all__ = [
+    "BROWSER_APPNAME_REGEX",
+    "build_browser_summary",
+    "build_dashboard_details",
+    "build_stopwatch_summary",
+    "empty_browser_summary",
+    "empty_stopwatch_summary",
+]

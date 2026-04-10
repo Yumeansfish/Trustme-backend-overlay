@@ -1,13 +1,11 @@
-from __future__ import annotations
+from backend_overlay.browser.snapshots.repository import (
+    SNAPSHOT_STORE_SCHEMA_VERSION,
+    SummarySnapshotRepository,
+    SummarySnapshotStore,
+)
 
-import trustme_api_legacy.browser.snapshots.store as _legacy_store
-
-__all__ = getattr(_legacy_store, "__all__", [])
-
-
-def __getattr__(name):
-    return getattr(_legacy_store, name)
-
-
-def __dir__():
-    return sorted(set(globals()) | set(dir(_legacy_store)))
+__all__ = [
+    "SNAPSHOT_STORE_SCHEMA_VERSION",
+    "SummarySnapshotRepository",
+    "SummarySnapshotStore",
+]

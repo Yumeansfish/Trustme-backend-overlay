@@ -37,12 +37,8 @@ def test_backend_overlay_exposes_trustme_api_metadata():
     overlay_path = list(backend_overlay.__path__)
     trustme_path = list(trustme_api.__path__)
 
-    assert overlay_path[0].endswith("src/backend_overlay")
-    assert overlay_path[1].endswith("src/trustme_api_legacy")
-    assert trustme_path == [
-        str(Path("src/trustme_api").resolve()),
-        str(Path("src/trustme_api_legacy").resolve()),
-    ]
+    assert overlay_path == [str(Path("src/backend_overlay").resolve())]
+    assert trustme_path == [str(Path("src/trustme_api").resolve())]
     assert not any("trustme-api/trustme_api" in path for path in overlay_path)
 
 
@@ -54,32 +50,32 @@ def test_backend_overlay_namespace_resolves_existing_subpackages():
 def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_app.__path__)[0].endswith("src/backend_overlay/app")
     assert list(trustme_app.__path__)[0].endswith("src/trustme_api/app")
-    assert list(trustme_app.__path__)[1:] == list(overlay_app.__path__)
+    assert len(list(trustme_app.__path__)) == 1
     assert list(overlay_browser.__path__)[0].endswith("src/backend_overlay/browser")
     assert list(trustme_browser.__path__)[0].endswith("src/trustme_api/browser")
-    assert list(trustme_browser.__path__)[1:] == list(overlay_browser.__path__)
+    assert len(list(trustme_browser.__path__)) == 1
 
     assert list(overlay_dashboard.__path__)[0].endswith("src/backend_overlay/browser/dashboard")
     assert list(trustme_dashboard.__path__)[0].endswith("src/trustme_api/browser/dashboard")
-    assert list(trustme_dashboard.__path__)[1:] == list(overlay_dashboard.__path__)
+    assert len(list(trustme_dashboard.__path__)) == 1
     assert list(overlay_settings.__path__)[0].endswith("src/backend_overlay/browser/settings")
     assert list(trustme_settings.__path__)[0].endswith("src/trustme_api/browser/settings")
-    assert list(trustme_settings.__path__)[1:] == list(overlay_settings.__path__)
+    assert len(list(trustme_settings.__path__)) == 1
     assert list(overlay_surveys.__path__)[0].endswith("src/backend_overlay/browser/surveys")
     assert list(trustme_surveys.__path__)[0].endswith("src/trustme_api/browser/surveys")
-    assert list(trustme_surveys.__path__)[1:] == list(overlay_surveys.__path__)
+    assert len(list(trustme_surveys.__path__)) == 1
     assert list(overlay_canonical.__path__)[0].endswith("src/backend_overlay/browser/canonical")
     assert list(trustme_canonical.__path__)[0].endswith("src/trustme_api/browser/canonical")
-    assert list(trustme_canonical.__path__)[1:] == list(overlay_canonical.__path__)
+    assert len(list(trustme_canonical.__path__)) == 1
     assert list(overlay_snapshots.__path__)[0].endswith("src/backend_overlay/browser/snapshots")
     assert list(trustme_snapshots.__path__)[0].endswith("src/trustme_api/browser/snapshots")
-    assert list(trustme_snapshots.__path__)[1:] == list(overlay_snapshots.__path__)
+    assert len(list(trustme_snapshots.__path__)) == 1
     assert list(overlay_shared.__path__)[0].endswith("src/backend_overlay/shared")
     assert list(trustme_shared.__path__)[0].endswith("src/trustme_api/shared")
-    assert list(trustme_shared.__path__)[1:] == list(overlay_shared.__path__)
+    assert len(list(trustme_shared.__path__)) == 1
     assert list(overlay_query.__path__)[0].endswith("src/backend_overlay/query")
     assert list(trustme_query.__path__)[0].endswith("src/trustme_api/query")
-    assert list(trustme_query.__path__)[1:] == list(overlay_query.__path__)
+    assert len(list(trustme_query.__path__)) == 1
 
     package_paths = [
         *list(overlay_app.__path__),
