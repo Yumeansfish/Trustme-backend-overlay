@@ -12,14 +12,6 @@ def is_repo_root(candidate: Path) -> bool:
     )
 
 
-def legacy_source_root(*, repo_root: Path) -> Path:
-    return repo_root / "trustme-api"
-
-
-def legacy_package_root(*, repo_root: Path) -> Path:
-    return legacy_source_root(repo_root=repo_root) / "trustme_api"
-
-
 def discover_repo_root(anchor: Path | None = None) -> Path:
     start = (anchor or Path(__file__)).resolve()
     current = start if start.is_dir() else start.parent

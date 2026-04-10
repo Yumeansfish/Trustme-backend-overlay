@@ -42,13 +42,6 @@ def test_discover_repo_root_uses_repo_markers():
     assert bootstrap.is_repo_root(discovered) is True
 
 
-def test_legacy_paths_are_derived_from_repo_root():
-    bootstrap = load_bootstrap_module()
-
-    assert bootstrap.legacy_source_root(repo_root=REPO_ROOT) == REPO_ROOT / "trustme-api"
-    assert bootstrap.legacy_package_root(repo_root=REPO_ROOT) == REPO_ROOT / "trustme-api" / "trustme_api"
-
-
 def test_ensure_repo_import_paths_only_adds_src_root():
     bootstrap = load_bootstrap_module()
 
