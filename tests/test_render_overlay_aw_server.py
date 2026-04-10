@@ -59,6 +59,30 @@ def test_patch_aw_server_spec_includes_optional_demo_assets_when_present(tmp_pat
     assert '"aw_server/checkins_data"' in patched
 
 
+def test_rewrite_tree_rewrites_backend_overlay_imports_for_aw_server(tmp_path):
+    script = load_script_module()
+    module_path = tmp_path / "main.py"
+    module_path.write_text(
+        "\n".join(
+            [
+                "from backend_overlay.__about__ import __version__",
+                "from backend_overlay.app import rest",
+                "from backend_overlay.shared.dirs import get_data_dir",
+                "from backend_overlay.browser.dashboard.service import DashboardAPI",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    script.rewrite_tree(module_path)
+
+    rewritten = module_path.read_text(encoding="utf-8")
+    assert "from aw_server.__about__ import __version__" in rewritten
+    assert "from aw_server import rest" in rewritten
+    assert "from aw_core.dirs import get_data_dir" in rewritten
+    assert "from aw_server.dashboard.service import DashboardAPI" in rewritten
+
+
 def test_resolve_optional_overlay_dir_map_prefers_repo_local_demo_assets(tmp_path):
     script = load_script_module()
     backend_dir = tmp_path / "backend"
