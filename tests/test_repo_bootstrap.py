@@ -659,6 +659,25 @@ def test_resolve_trustme_api_legacy_top_level_shims_use_src_entrypoints():
         assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
 
 
+def test_resolve_trustme_api_legacy_app_modules_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "trustme_api_legacy.app.config": REPO_ROOT / "src" / "trustme_api_legacy" / "app" / "config.py",
+        "trustme_api_legacy.app.custom_static": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "app"
+        / "custom_static.py",
+        "trustme_api_legacy.app.log": REPO_ROOT / "src" / "trustme_api_legacy" / "app" / "log.py",
+        "trustme_api_legacy.app.rest": REPO_ROOT / "src" / "trustme_api_legacy" / "app" / "rest.py",
+        "trustme_api_legacy.app.server": REPO_ROOT / "src" / "trustme_api_legacy" / "app" / "server.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
 def test_resolve_trustme_api_legacy_feature_packages_use_src_entrypoints():
     bootstrap = load_bootstrap_module()
 
