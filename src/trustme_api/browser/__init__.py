@@ -1,0 +1,18 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import backend_overlay.browser as _overlay_browser
+
+PACKAGE_ROOT = Path(__file__).resolve().parent
+
+__all__ = getattr(_overlay_browser, "__all__", [])
+__path__ = [str(PACKAGE_ROOT), *list(_overlay_browser.__path__)]
+
+
+def __getattr__(name):
+    return getattr(_overlay_browser, name)
+
+
+def __dir__():
+    return sorted(set(globals()) | set(dir(_overlay_browser)))

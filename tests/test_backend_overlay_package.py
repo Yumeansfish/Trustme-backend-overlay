@@ -26,7 +26,6 @@ from backend_overlay.browser.surveys import survey_template as overlay_survey_te
 from backend_overlay.browser.settings import schema as overlay_schema
 from backend_overlay.query.exceptions import QueryException as overlay_query_exception
 from backend_overlay.shared.dirs import get_data_dir as overlay_get_data_dir
-from trustme_api_legacy.browser.settings import schema as legacy_schema
 from trustme_api.browser.surveys import survey_template as trustme_survey_template
 from trustme_api.browser.settings import schema as trustme_schema
 from trustme_api.query.exceptions import QueryException as trustme_query_exception
@@ -40,35 +39,47 @@ def test_backend_overlay_exposes_trustme_api_metadata():
 
     assert overlay_path[0].endswith("src/backend_overlay")
     assert overlay_path[1].endswith("src/trustme_api_legacy")
-    assert overlay_path[-1] == trustme_path[-1]
+    assert trustme_path == [
+        str(Path("src/trustme_api").resolve()),
+        str(Path("src/trustme_api_legacy").resolve()),
+    ]
+    assert overlay_path[-1].endswith("trustme-api/trustme_api")
 
 
 def test_backend_overlay_namespace_resolves_existing_subpackages():
     assert overlay_schema.__file__.endswith("src/backend_overlay/browser/settings/schema.py")
-    assert overlay_schema.normalize_settings_data is legacy_schema.normalize_settings_data
-    assert overlay_schema.normalize_settings_data is not trustme_schema.normalize_settings_data
+    assert overlay_schema.normalize_settings_data is trustme_schema.normalize_settings_data
 
 
 def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_app.__path__)[0].endswith("src/backend_overlay/app")
-    assert list(overlay_app.__path__)[1:] == list(trustme_app.__path__)
+    assert list(trustme_app.__path__)[0].endswith("src/trustme_api/app")
+    assert list(trustme_app.__path__)[1:] == list(overlay_app.__path__)
     assert list(overlay_browser.__path__)[0].endswith("src/backend_overlay/browser")
-    assert list(overlay_browser.__path__)[1:] == list(trustme_browser.__path__)
+    assert list(trustme_browser.__path__)[0].endswith("src/trustme_api/browser")
+    assert list(trustme_browser.__path__)[1:] == list(overlay_browser.__path__)
 
     assert list(overlay_dashboard.__path__)[0].endswith("src/backend_overlay/browser/dashboard")
-    assert list(overlay_dashboard.__path__)[1:] == list(trustme_dashboard.__path__)
+    assert list(trustme_dashboard.__path__)[0].endswith("src/trustme_api/browser/dashboard")
+    assert list(trustme_dashboard.__path__)[1:] == list(overlay_dashboard.__path__)
     assert list(overlay_settings.__path__)[0].endswith("src/backend_overlay/browser/settings")
-    assert list(overlay_settings.__path__)[1:] == list(trustme_settings.__path__)
+    assert list(trustme_settings.__path__)[0].endswith("src/trustme_api/browser/settings")
+    assert list(trustme_settings.__path__)[1:] == list(overlay_settings.__path__)
     assert list(overlay_surveys.__path__)[0].endswith("src/backend_overlay/browser/surveys")
-    assert list(overlay_surveys.__path__)[1:] == list(trustme_surveys.__path__)
+    assert list(trustme_surveys.__path__)[0].endswith("src/trustme_api/browser/surveys")
+    assert list(trustme_surveys.__path__)[1:] == list(overlay_surveys.__path__)
     assert list(overlay_canonical.__path__)[0].endswith("src/backend_overlay/browser/canonical")
-    assert list(overlay_canonical.__path__)[1:] == list(trustme_canonical.__path__)
+    assert list(trustme_canonical.__path__)[0].endswith("src/trustme_api/browser/canonical")
+    assert list(trustme_canonical.__path__)[1:] == list(overlay_canonical.__path__)
     assert list(overlay_snapshots.__path__)[0].endswith("src/backend_overlay/browser/snapshots")
-    assert list(overlay_snapshots.__path__)[1:] == list(trustme_snapshots.__path__)
+    assert list(trustme_snapshots.__path__)[0].endswith("src/trustme_api/browser/snapshots")
+    assert list(trustme_snapshots.__path__)[1:] == list(overlay_snapshots.__path__)
     assert list(overlay_shared.__path__)[0].endswith("src/backend_overlay/shared")
-    assert list(overlay_shared.__path__)[1:] == list(trustme_shared.__path__)
+    assert list(trustme_shared.__path__)[0].endswith("src/trustme_api/shared")
+    assert list(trustme_shared.__path__)[1:] == list(overlay_shared.__path__)
     assert list(overlay_query.__path__)[0].endswith("src/backend_overlay/query")
-    assert list(overlay_query.__path__)[1:] == list(trustme_query.__path__)
+    assert list(trustme_query.__path__)[0].endswith("src/trustme_api/query")
+    assert list(trustme_query.__path__)[1:] == list(overlay_query.__path__)
 
 
 def test_backend_overlay_browser_shims_use_internal_legacy_bridge():

@@ -3,6 +3,14 @@ from pathlib import Path
 from trustme_api.browser.dashboard import checkins_service as checkins
 
 
+def _patch_checkins_get_data_dir(monkeypatch, provider) -> None:
+    monkeypatch.setattr(checkins, "get_data_dir", provider, raising=False)
+
+    legacy_module = getattr(checkins, "_legacy_checkins_service", None)
+    if legacy_module is not None:
+        monkeypatch.setattr(legacy_module, "get_data_dir", provider)
+
+
 def _module_path(tmp_path: Path) -> Path:
     repo_root = tmp_path / "repo"
     (repo_root / "scripts").mkdir(parents=True)
@@ -18,7 +26,7 @@ def test_checkins_candidates_follow_env_package_runtime_order(tmp_path: Path, mo
     runtime_dir = tmp_path / "runtime-data"
 
     monkeypatch.setenv("TRUSTME_CHECKINS_DIR", str(override_dir))
-    monkeypatch.setattr(checkins, "get_data_dir", lambda _: str(runtime_dir))
+    _patch_checkins_get_data_dir(monkeypatch, lambda _: str(runtime_dir))
 
     candidates = checkins._checkins_data_dir_candidates(module_path)
 
@@ -47,6 +55,6 @@ def test_resolve_checkins_data_dir_prefers_repo_local_dir_over_bundled_and_runti
     (runtime_dir / "2026-03-31").write_text("runtime\n", encoding="utf-8")
 
     monkeypatch.delenv("TRUSTME_CHECKINS_DIR", raising=False)
-    monkeypatch.setattr(checkins, "get_data_dir", lambda _: str(tmp_path / "runtime-data"))
+    _patch_checkins_get_data_dir(monkeypatch, lambda _: str(tmp_path / "runtime-data"))
 
     assert checkins.resolve_checkins_data_dir(module_path) == repo_local_dir

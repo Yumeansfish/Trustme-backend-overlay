@@ -68,7 +68,42 @@ def test_resolve_module_file_uses_import_spec_without_importing_dependencies():
 
     resolved = bootstrap.resolve_module_file("trustme_api.main", repo_root=REPO_ROOT)
 
-    assert resolved == REPO_ROOT / "trustme-api" / "trustme_api" / "main.py"
+    assert resolved == REPO_ROOT / "src" / "trustme_api" / "main.py"
+
+
+def test_resolve_public_trustme_api_shims_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "trustme_api.__about__": REPO_ROOT / "src" / "trustme_api" / "__about__.py",
+        "trustme_api.api": REPO_ROOT / "src" / "trustme_api" / "api.py",
+        "trustme_api.exceptions": REPO_ROOT / "src" / "trustme_api" / "exceptions.py",
+        "trustme_api.main": REPO_ROOT / "src" / "trustme_api" / "main.py",
+        "trustme_api.storage": REPO_ROOT / "src" / "trustme_api" / "storage.py",
+        "trustme_api.transform": REPO_ROOT / "src" / "trustme_api" / "transform.py",
+        "trustme_api.app": REPO_ROOT / "src" / "trustme_api" / "app" / "__init__.py",
+        "trustme_api.browser": REPO_ROOT / "src" / "trustme_api" / "browser" / "__init__.py",
+        "trustme_api.shared": REPO_ROOT / "src" / "trustme_api" / "shared" / "__init__.py",
+        "trustme_api.query": REPO_ROOT / "src" / "trustme_api" / "query" / "__init__.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
+def test_resolve_public_trustme_api_feature_packages_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "trustme_api.browser.canonical": REPO_ROOT / "src" / "trustme_api" / "browser" / "canonical" / "__init__.py",
+        "trustme_api.browser.dashboard": REPO_ROOT / "src" / "trustme_api" / "browser" / "dashboard" / "__init__.py",
+        "trustme_api.browser.settings": REPO_ROOT / "src" / "trustme_api" / "browser" / "settings" / "__init__.py",
+        "trustme_api.browser.snapshots": REPO_ROOT / "src" / "trustme_api" / "browser" / "snapshots" / "__init__.py",
+        "trustme_api.browser.surveys": REPO_ROOT / "src" / "trustme_api" / "browser" / "surveys" / "__init__.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
 
 
 def test_resolve_backend_overlay_module_file_uses_overlay_entrypoint():
@@ -514,9 +549,16 @@ from pathlib import Path
 repo_root = Path({str(REPO_ROOT)!r})
 sys.path = [str(repo_root / "src")] + [entry for entry in sys.path if entry not in {{str(repo_root / "src"), str(repo_root / "trustme-api")}}]
 import trustme_api
+import trustme_api.browser
+import trustme_api.shared
+import trustme_api.query
 from trustme_api.browser.settings import schema
 print(trustme_api.__file__)
+print(trustme_api.browser.__file__)
+print(trustme_api.shared.__file__)
+print(trustme_api.query.__file__)
 print(schema.__file__)
+print(list(trustme_api.__path__))
 """
     completed = subprocess.run(
         [sys.executable, "-c", script],
@@ -527,7 +569,11 @@ print(schema.__file__)
     output_lines = completed.stdout.strip().splitlines()
 
     assert output_lines[0].endswith("src/trustme_api/__init__.py")
-    assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")
+    assert output_lines[1].endswith("src/trustme_api/browser/__init__.py")
+    assert output_lines[2].endswith("src/trustme_api/shared/__init__.py")
+    assert output_lines[3].endswith("src/trustme_api/query/__init__.py")
+    assert output_lines[4].endswith("src/backend_overlay/browser/settings/schema.py")
+    assert "trustme-api/trustme_api" not in output_lines[5]
 
 
 def test_trustme_api_bridges_upstream_aw_core_modules_with_only_src_on_sys_path():
