@@ -636,3 +636,64 @@ print(schema.__file__)
 
     assert output_lines[0].endswith("src/trustme_api_legacy/__init__.py")
     assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")
+
+
+def test_resolve_trustme_api_legacy_top_level_shims_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "trustme_api_legacy.__about__": REPO_ROOT / "src" / "trustme_api_legacy" / "__about__.py",
+        "trustme_api_legacy.api": REPO_ROOT / "src" / "trustme_api_legacy" / "api.py",
+        "trustme_api_legacy.exceptions": REPO_ROOT / "src" / "trustme_api_legacy" / "exceptions.py",
+        "trustme_api_legacy.main": REPO_ROOT / "src" / "trustme_api_legacy" / "main.py",
+        "trustme_api_legacy.app": REPO_ROOT / "src" / "trustme_api_legacy" / "app" / "__init__.py",
+        "trustme_api_legacy.browser": REPO_ROOT / "src" / "trustme_api_legacy" / "browser" / "__init__.py",
+        "trustme_api_legacy.browser.dashboard_dto": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "dashboard_dto.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
+def test_resolve_trustme_api_legacy_feature_packages_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+
+    expected = {
+        "trustme_api_legacy.browser.canonical": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "canonical"
+        / "__init__.py",
+        "trustme_api_legacy.browser.dashboard": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "dashboard"
+        / "__init__.py",
+        "trustme_api_legacy.browser.settings": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "settings"
+        / "__init__.py",
+        "trustme_api_legacy.browser.snapshots": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "snapshots"
+        / "__init__.py",
+        "trustme_api_legacy.browser.surveys": REPO_ROOT
+        / "src"
+        / "trustme_api_legacy"
+        / "browser"
+        / "surveys"
+        / "__init__.py",
+    }
+
+    for module_name, expected_path in expected.items():
+        assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
