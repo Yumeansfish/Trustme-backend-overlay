@@ -93,6 +93,16 @@ def test_backend_overlay_browser_shims_use_internal_legacy_bridge():
     assert offenders == []
 
 
+def test_backend_overlay_dashboard_dto_lazy_shim_handles_legacy_name_collision():
+    from backend_overlay.browser import dashboard_dto
+
+    aggregated_event = dashboard_dto.AggregatedEvent
+
+    from backend_overlay.browser.dashboard import dto
+
+    assert aggregated_event is dto.AggregatedEvent
+
+
 def test_backend_overlay_package_includes_overlay_json_assets():
     overlay_settings_asset = Path(overlay_schema.__file__).with_name("settings_seed_knowledgebase.v1.json")
     overlay_surveys_asset = Path(overlay_survey_template.__file__).with_name("fixed_questionnaire.v1.json")

@@ -635,7 +635,7 @@ print(schema.__file__)
     output_lines = completed.stdout.strip().splitlines()
 
     assert output_lines[0].endswith("src/trustme_api_legacy/__init__.py")
-    assert output_lines[1].endswith("trustme-api/trustme_api/browser/settings/schema.py")
+    assert output_lines[1].endswith("src/trustme_api_legacy/browser/settings/schema.py")
 
 
 def test_resolve_trustme_api_legacy_top_level_shims_use_src_entrypoints():
@@ -716,3 +716,29 @@ def test_resolve_trustme_api_legacy_feature_packages_use_src_entrypoints():
 
     for module_name, expected_path in expected.items():
         assert bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT) == expected_path
+
+
+def test_resolve_trustme_api_legacy_browser_modules_use_src_entrypoints():
+    bootstrap = load_bootstrap_module()
+    legacy_browser_root = REPO_ROOT / "trustme-api" / "trustme_api" / "browser"
+    legacy_shim_root = REPO_ROOT / "src" / "trustme_api_legacy" / "browser"
+
+    missing = []
+    mismatched = []
+    for legacy_module in sorted(legacy_browser_root.rglob("*.py")):
+        relative_path = legacy_module.relative_to(legacy_browser_root)
+        if relative_path.name == "__init__.py":
+            continue
+
+        expected_path = legacy_shim_root / relative_path
+        if not expected_path.exists():
+            missing.append(str(relative_path))
+            continue
+
+        module_name = "trustme_api_legacy.browser." + ".".join(relative_path.with_suffix("").parts)
+        resolved = bootstrap.resolve_module_file(module_name, repo_root=REPO_ROOT)
+        if resolved != expected_path:
+            mismatched.append(f"{module_name}: {resolved} != {expected_path}")
+
+    assert missing == []
+    assert mismatched == []

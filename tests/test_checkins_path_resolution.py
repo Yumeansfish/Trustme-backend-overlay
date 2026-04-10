@@ -4,11 +4,19 @@ from trustme_api.browser.dashboard import checkins_service as checkins
 
 
 def _patch_checkins_get_data_dir(monkeypatch, provider) -> None:
-    monkeypatch.setattr(checkins, "get_data_dir", provider, raising=False)
+    modules = [checkins]
 
     legacy_module = getattr(checkins, "_legacy_checkins_service", None)
     if legacy_module is not None:
-        monkeypatch.setattr(legacy_module, "get_data_dir", provider)
+        modules.append(legacy_module)
+
+    for module in list(modules):
+        load_legacy_module = getattr(module, "_legacy_module", None)
+        if load_legacy_module is not None:
+            modules.append(load_legacy_module())
+
+    for module in modules:
+        monkeypatch.setattr(module, "get_data_dir", provider, raising=False)
 
 
 def _module_path(tmp_path: Path) -> Path:

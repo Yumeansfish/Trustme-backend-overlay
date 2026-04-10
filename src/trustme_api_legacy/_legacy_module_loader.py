@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -11,8 +12,14 @@ REPO_ROOT = PACKAGE_ROOT.parents[1]
 LEGACY_PACKAGE_ROOT = REPO_ROOT / "trustme-api" / "trustme_api"
 
 
+def _cache_module_name(relative_path: str, alias: str) -> str:
+    safe_alias = "".join(character if character.isalnum() else "_" for character in alias)
+    path_digest = hashlib.sha1(relative_path.encode("utf-8")).hexdigest()[:12]
+    return f"_trustme_api_legacy_file_{safe_alias}_{path_digest}"
+
+
 def load_legacy_module(relative_path: str, alias: str) -> ModuleType:
-    module_name = f"_trustme_api_legacy_{alias.replace('.', '_')}"
+    module_name = _cache_module_name(relative_path, alias)
     cached = sys.modules.get(module_name)
     if cached is not None:
         return cached
