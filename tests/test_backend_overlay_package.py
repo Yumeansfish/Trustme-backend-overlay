@@ -43,7 +43,7 @@ def test_backend_overlay_exposes_trustme_api_metadata():
         str(Path("src/trustme_api").resolve()),
         str(Path("src/trustme_api_legacy").resolve()),
     ]
-    assert overlay_path[-1].endswith("trustme-api/trustme_api")
+    assert not any("trustme-api/trustme_api" in path for path in overlay_path)
 
 
 def test_backend_overlay_namespace_resolves_existing_subpackages():
@@ -80,6 +80,24 @@ def test_backend_overlay_subpackage_shims_preserve_own_package_roots():
     assert list(overlay_query.__path__)[0].endswith("src/backend_overlay/query")
     assert list(trustme_query.__path__)[0].endswith("src/trustme_api/query")
     assert list(trustme_query.__path__)[1:] == list(overlay_query.__path__)
+
+    package_paths = [
+        *list(overlay_app.__path__),
+        *list(overlay_browser.__path__),
+        *list(overlay_dashboard.__path__),
+        *list(overlay_settings.__path__),
+        *list(overlay_surveys.__path__),
+        *list(overlay_canonical.__path__),
+        *list(overlay_snapshots.__path__),
+        *list(trustme_app.__path__),
+        *list(trustme_browser.__path__),
+        *list(trustme_dashboard.__path__),
+        *list(trustme_settings.__path__),
+        *list(trustme_surveys.__path__),
+        *list(trustme_canonical.__path__),
+        *list(trustme_snapshots.__path__),
+    ]
+    assert not any("trustme-api/trustme_api" in path for path in package_paths)
 
 
 def test_backend_overlay_browser_shims_use_internal_legacy_bridge():

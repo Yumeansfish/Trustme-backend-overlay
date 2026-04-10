@@ -4,12 +4,7 @@ from pathlib import Path
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
-REPO_ROOT = PACKAGE_ROOT.parents[1]
-LEGACY_PACKAGE_ROOT = REPO_ROOT / "trustme-api" / "trustme_api"
-
 __path__ = [str(PACKAGE_ROOT)]
-if LEGACY_PACKAGE_ROOT.is_dir():
-    __path__.append(str(LEGACY_PACKAGE_ROOT))
 
 from .__about__ import __version__
 
