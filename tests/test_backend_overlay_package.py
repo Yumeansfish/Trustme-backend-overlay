@@ -137,6 +137,7 @@ def test_pyproject_declares_overlay_package_data_entries():
     pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     package_data = pyproject["tool"]["setuptools"]["package-data"]
 
+    assert pyproject["project"]["name"] == "backend-overlay"
     assert package_data["backend_overlay.browser.settings"] == ["*.json"]
     assert package_data["backend_overlay.browser.surveys"] == ["*.json"]
 
